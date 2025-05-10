@@ -1,5 +1,3 @@
-# Tmp in memory storage
-# TODO: Replace with a database or persistent storage solution
 from store_data.database import Database
 
 user_data = {}
