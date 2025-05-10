@@ -1,3 +1,6 @@
+from store_data.database import Database
+
+
 def generate_prompt(user_id, question):
     """
     Generate a prompt for the language model from the user data.
@@ -12,13 +15,17 @@ def generate_prompt(user_id, question):
     Returns:
         str: The generated prompt.
     """
+    db = Database(dbname="llm_engineering_tool", user="postgres", password="postgres")
 
-    data = user_data.get(user_id)
-    if not data:
+    db.connect()
+    user_data = db.fetch_one("SELECT * FROM user_data WHERE user_id = %s", (user_id,))
+    db.close()
+
+    if not user_data:
         return "User data not found."
 
-    instructions = data["instructions"]
-    documents = data["documents"]
+    instructions = user_data["instructions"]
+    documents = user_data["document_text"]
 
     prompt = f"""
     Instructions: {instructions}

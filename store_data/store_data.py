@@ -1,5 +1,6 @@
 # Tmp in memory storage
 # TODO: Replace with a database or persistent storage solution
+from store_data.database import Database
 
 user_data = {}
 
@@ -16,7 +17,11 @@ def store_user_data(user_id, document_text, instructions):
     Returns:
         None
     """
-    user_data[user_id] = {
-        "documents": document_text,
-        "instructions": instructions
-    }
+
+    db = Database(dbname="llm_engineering_tool", user="postgres", password="postgres")
+    db.connect()
+    db.execute_query(
+        "INSERT INTO user_data (user_id, document_text, instructions) VALUES (%s, %s, %s)",
+        (user_id, document_text, instructions)
+    )
+    db.close()
