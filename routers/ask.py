@@ -24,4 +24,4 @@ def ask_question(user_id: str, question: str):
 
     prompt = generate_prompt(user_id, question)
     response = query_local_model(prompt)
-    return {"success":True,"answer": response}
+    return {"success": True, "answer": response}
