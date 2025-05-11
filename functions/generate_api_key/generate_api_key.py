@@ -13,6 +13,7 @@ def generate_api_key():
     :return: A 32-character alphanumeric API key
     :rtype: str
     """
+
     characters = string.ascii_letters + string.digits
     api_key = ''.join(random.choice(characters) for _ in range(32))
 
