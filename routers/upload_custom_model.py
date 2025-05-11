@@ -36,6 +36,11 @@ async def upload_document(
         dict: A message indicating successful data upload and storage.
     """
 
+    # TODO For Wasay: For now this stores the uploaded documents in ./uploads directory which for many users will
+    #  be messy. So I think we should save it in the way that the documents will be stored with the user_id as the
+    #  directory name and the file name will be the document name and after extracting the contents the file should
+    #  be deleted cuz we dont need that. its my opinion, if u think of a better way please let me know
+
     os.makedirs("./uploads", exist_ok=True)
     file_path = f"./uploads/{file.filename}"
     with open(file_path, "wb") as buffer:
