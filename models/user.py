@@ -13,6 +13,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Create base class for declarative models
 Base = declarative_base()
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -28,6 +29,7 @@ class User(Base):
     def verify_password(self, plain_password: str) -> bool:
         return pwd_context.verify(plain_password, self.hashed_password)
 
+
 # Database connection
 DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME')}"
 
@@ -35,10 +37,14 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Create tables if they don't exist
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
 # Dependency to get DB session
+
+
 def get_db():
     db = SessionLocal()
     try:
