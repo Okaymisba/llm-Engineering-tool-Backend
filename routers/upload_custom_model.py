@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.post("/upload/")
 async def upload_document(
-        user_id: str = Form(...),
+        user_id: int = Form(...),
         instructions: str = Form(None),
         file: UploadFile = File(None)
 ):
