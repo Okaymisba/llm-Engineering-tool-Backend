@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from models.user import init_db
+from routers import auth
 
 from routers import upload_custom_model, ask
 
@@ -9,3 +10,6 @@ init_db()
 
 app.include_router(upload_custom_model.router)
 app.include_router(ask.router)
+
+# Include routers
+app.include_router(auth.router, prefix="/auth", tags=["authentication"])
