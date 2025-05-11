@@ -1,4 +1,8 @@
-from store_data.database import Database
+from database import Database
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 def store_user_data(user_id, document_text, instructions):
@@ -14,7 +18,7 @@ def store_user_data(user_id, document_text, instructions):
         None
     """
 
-    db = Database(dbname="llm_engineering_tool", user="postgres", password="postgres")
+    db = Database(dbname=os.getenv("DB_NAME"), user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD"))
     db.connect()
     db.execute_query(
         "INSERT INTO user_data (user_id, document_text, instructions) VALUES (%s, %s, %s)",
