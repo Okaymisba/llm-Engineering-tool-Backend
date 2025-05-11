@@ -51,7 +51,7 @@ async def upload_document(
         document_text = parse_document(file_path)
 
         store_user_data(user_id, document_text, instructions)
-        return {"message": "Data uploaded and stored successfully."}
+        return {"success":True,"message": "Data uploaded and stored successfully."}
 
     finally:
         if os.path.exists(file_path):
