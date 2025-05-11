@@ -41,12 +41,24 @@ async def upload_document(
     #  directory name and the file name will be the document name and after extracting the contents the file should
     #  be deleted cuz we dont need that. its my opinion, if u think of a better way please let me know
 
-    os.makedirs("./uploads", exist_ok=True)
-    file_path = f"./uploads/{file.filename}"
+    upload_dir = f"./uploads/{user_id}"
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    document_text = parse_document(file_path)
+    try:
+        document_text = parse_document(file_path)
 
-    store_user_data(user_id, document_text, instructions)
-    return {"message": "Data uploaded and stored successfully."}
+        store_user_data(user_id, document_text, instructions)
+        return {"message": "Data uploaded and stored successfully."}
+
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        if os.path.exists(upload_dir):
+            os.removedirs(upload_dir)
+
+
+    
+    
