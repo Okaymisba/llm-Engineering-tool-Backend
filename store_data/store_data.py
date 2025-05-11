@@ -1,7 +1,5 @@
 from store_data.database import Database
 
-user_data = {}
-
 
 def store_user_data(user_id, document_text, instructions):
     """
