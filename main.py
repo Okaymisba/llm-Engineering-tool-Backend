@@ -10,4 +10,4 @@ init_db()
 
 app.include_router(upload_custom_model.router)
 app.include_router(ask.router)
-app.include_router(auth.router, prefix="/auth", tags=["authentication"])
+app.include_router(auth.router)
