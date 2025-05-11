@@ -1,43 +1,39 @@
 from store_data.database import Database
 
 
-def generate_prompt(user_id, question):
+def generate_prompt(api_key, question):
     """
-    Generates a prompt to answer a question based on user-specific data and uploaded text
-    documents.
+    Generates a prompt based on user data retrieved from a database, including instructions,
+    documents, and the provided question. The prompt is generated using the data associated
+    with the provided API key.
 
-    The function connects to a database to fetch user details and their associated
-    data, including instructions and relevant document text. It utilizes this
-    data to construct a comprehensive prompt, incorporating the provided question.
-
-    :param user_id: The unique identifier of the user.
-    :type user_id: int
-    :param question: The question that needs to be addressed based on the user's data.
+    :param api_key: The API key to identify the user in the database.
+    :type api_key: str
+    :param question: The question to be incorporated into the generated prompt.
     :type question: str
-    :return: A constructed prompt string containing instructions, user-uploaded
-             documents, and the specified question, or an error message if the
-             user data is not found.
+    :return: A string containing the generated prompt based on user data and the given question.
     :rtype: str
     """
+
     db = Database(dbname="llm_engineering_tool", user="postgres", password="postgres")
 
     db.connect()
-    user_data = db.fetch_one("SELECT * FROM user_data WHERE user_id = %s", (user_id,))
+    user_data = db.fetch_one("SELECT * FROM api_list WHERE api_key = %s", (api_key,))
     db.close()
 
     if not user_data:
         return "User data not found."
 
     instructions = user_data["instructions"]
-    documents = user_data["document_text"]
+    documents = user_data["document_data"]
 
     prompt = f"""
     Instructions: {instructions}
 
+    Based on the provided information below and the instructions given above, answer the following question:
+    {question}
+    
     You have the following information from the uploaded documents:
     {documents}
-
-    Based on the above information and the instructions given, answer the following question:
-    {question}
     """
     return prompt

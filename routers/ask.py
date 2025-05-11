@@ -7,21 +7,19 @@ router = APIRouter()
 
 
 @router.get("/ask/")
-def ask_question(user_id: str, question: str):
+def ask_question(api_key: str, question: str):
     """
-    Handles GET requests to answer a question using stored user data.
+    Handles a request to ask a question, generates a prompt from the input, queries a local model for an
+    answer, and returns the result.
 
-    This function generates a prompt from the stored user data and the given question,
-    sends the prompt to a local language model, and returns the model's response.
-
-    Args:
-        user_id (str): The ID of the user whose data is used to generate the prompt.
-        question (str): The question to be answered by the language model.
-
-    Returns:
-        dict: A dictionary containing the answer from the language model.
+    :param api_key: API key used for authentication or identification purposes.
+    :type api_key: str
+    :param question: The question text to be processed and answered by the model.
+    :type question: str
+    :return: A dictionary containing the success status and the generated answer.
+    :rtype: dict
     """
 
-    prompt = generate_prompt(user_id, question)
+    prompt = generate_prompt(api_key, question)
     response = query_local_model(prompt)
-    return {"success":True,"answer": response}
+    return {"success": True, "answer": response}
