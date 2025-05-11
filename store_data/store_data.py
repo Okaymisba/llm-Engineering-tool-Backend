@@ -7,15 +7,19 @@ load_dotenv()
 
 def store_user_data(user_id, document_text, instructions):
     """
-    Stores user data in the temporary in-memory storage.
+    Stores user-provided data into a database. The function connects to the database,
+    executes an SQL query to insert the provided data, and then closes the database connection.
+    This function requires the existence of a database and appropriate environment variable
+    configuration: `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
 
-    Args:
-        user_id (str): The ID of the user.
-        document_text (str): The text content of the uploaded documents.
-        instructions (str): The instructions for the language model.
-
-    Returns:
-        None
+    :param user_id: The unique identifier for the user
+    :type user_id: int
+    :param document_text: The text document provided by the user
+    :type document_text: str
+    :param instructions: Additional instructions associated with the document
+    :type instructions: str
+    :return: None
+    :rtype: NoneType
     """
 
     db = Database(dbname=os.getenv("DB_NAME"), user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD"))

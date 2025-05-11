@@ -6,16 +6,18 @@ import docx
 
 def parse_pdf(file_path):
     """
-    Extracts text from a pdf file.
+    Parses the content of a PDF file and extracts all textual information
+    from its pages.
 
-    This function opens a pdf file and extracts the text content from each page.
-    The extracted text is concatenated into a single string and returned.
+    This function utilizes the PyMuPDF library to open the specified
+    PDF file and iterate through its pages to collect their textual
+    content. The resulting text is compiled into a single string.
 
-    Args:
-        file_path (str): The path to the pdf file to be parsed.
-
-    Returns:
-        str: The extracted text from the pdf file.
+    :param file_path: The file path to the PDF document to be parsed.
+    :type file_path: str
+    :return: A string containing all the textual content extracted from
+        the PDF file.
+    :rtype: str
     """
 
     text = ""
@@ -27,16 +29,18 @@ def parse_pdf(file_path):
 
 def parse_docx(file_path):
     """
-    Extracts text from a docx file.
+    Parses a .docx file and extracts text content from all paragraphs.
 
-    This function opens a docx file and extracts the text content from each paragraph.
-    The extracted text is concatenated into a single string and returned.
+    This function takes the file path of a .docx document, opens the file,
+    and extracts the text from each paragraph into a single concatenated string.
+    Each paragraph's text is separated by a newline character in the returned
+    string.
 
-    Args:
-        file_path (str): The path to the docx file to be parsed.
-
-    Returns:
-        str: The concatenated text content of the docx file.
+    :param file_path: Path to the .docx file to be parsed
+    :type file_path: str
+    :return: A string containing the concatenated text from all paragraphs of
+        the .docx document, separated by newline characters
+    :rtype: str
     """
 
     doc = docx.Document(file_path)
@@ -45,16 +49,17 @@ def parse_docx(file_path):
 
 def parse_image(file_path):
     """
-    Extracts text from an image file.
+    Parses text from an image file using Optical Character Recognition (OCR).
 
-    This function opens an image file and uses the Tesseract OCR engine to extract
-    text from the image. The extracted text is returned as a string.
+    This function takes the file path of an image as input, opens the image,
+    and extracts readable text from it using the pytesseract OCR library. It
+    is assumed that the image contains text data that can be processed by
+    OCR.
 
-    Args:
-        file_path (str): The path to the image file to be parsed.
-
-    Returns:
-        str: The extracted text from the image file.
+    :param file_path: The path to the image file to be processed.
+    :type file_path: str
+    :return: Extracted text from the image.
+    :rtype: str
     """
 
     image = Image.open(file_path)
@@ -63,20 +68,18 @@ def parse_image(file_path):
 
 def parse_document(file_path):
     """
-    Extracts text from a given document.
+    Parses a document based on its file type. The function identifies the file
+    type (e.g., PDF, DOCX, or image) from the file extension and performs an
+    appropriate parsing operation. For unsupported file formats, it raises a
+    ValueError.
 
-    This function takes a file path as argument and extracts the text content from the given document.
-    It supports pdf, docx and image files. The extracted text is returned as a string.
-
-    Args:
-        file_path (str): The path to the document to be parsed.
-
-    Returns:
-        str: The extracted text from the document.
-
-    Raises:
-        ValueError: If the file type is not supported.
+    :param file_path: Path to the document file to be parsed.
+    :type file_path: str
+    :return: The parsed content of the document.
+    :rtype: Any
+    :raises ValueError: If the file type is unsupported.
     """
+
     if file_path.endswith('.pdf'):
         return parse_pdf(file_path)
     elif file_path.endswith('.docx'):

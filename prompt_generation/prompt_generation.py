@@ -3,17 +3,21 @@ from store_data.database import Database
 
 def generate_prompt(user_id, question):
     """
-    Generate a prompt for the language model from the user data.
+    Generates a prompt to answer a question based on user-specific data and uploaded text
+    documents.
 
-    Given a user_id and a question, generate a prompt for the language model
-    that includes the instructions and text from the uploaded documents.
+    The function connects to a database to fetch user details and their associated
+    data, including instructions and relevant document text. It utilizes this
+    data to construct a comprehensive prompt, incorporating the provided question.
 
-    Args:
-        user_id (str): The ID of the user.
-        question (str): The question to be answered.
-
-    Returns:
-        str: The generated prompt.
+    :param user_id: The unique identifier of the user.
+    :type user_id: int
+    :param question: The question that needs to be addressed based on the user's data.
+    :type question: str
+    :return: A constructed prompt string containing instructions, user-uploaded
+             documents, and the specified question, or an error message if the
+             user data is not found.
+    :rtype: str
     """
     db = Database(dbname="llm_engineering_tool", user="postgres", password="postgres")
 
