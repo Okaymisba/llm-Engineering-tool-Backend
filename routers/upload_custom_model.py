@@ -4,6 +4,7 @@ import shutil
 from document_handling.document_handling import parse_document
 from fastapi import FastAPI, UploadFile, File, Form, APIRouter
 
+from functions.generate_api_key.generate_api_key import generate_api_key
 from store_data.store_data import store_user_data
 
 router = APIRouter()
@@ -36,6 +37,9 @@ async def upload_document(
         dict: A message indicating successful data upload and storage.
     """
 
+    # TODO: Add a method for extracting the user id from the table user_data for now the user id is provided through
+    #  the form but its not right so after wasay finishes the authentications then it will be done
+
     upload_dir = f"./uploads/{user_id}"
     os.makedirs(upload_dir, exist_ok=True)
     file_path = os.path.join(upload_dir, file.filename)
@@ -45,7 +49,8 @@ async def upload_document(
     try:
         document_text = parse_document(file_path)
 
-        store_user_data(user_id, document_text, instructions)
+        api_key = generate_api_key()
+        store_user_data(user_id, api_key, document_text, instructions)
         return {"success": True, "message": "Data uploaded and stored successfully."}
 
     finally:
