@@ -63,7 +63,7 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 
-@router.post("/login", response_model=UserResponse)
+@router.post("/login")
 async def login_user(
     login_data: LoginRequest,
     db: Session = Depends(get_db)
@@ -76,7 +76,7 @@ async def login_user(
         db (Session): Database session.
 
     Returns:
-        UserResponse: The authenticated user's information.
+        Success message
 
     Raises:
         HTTPException: If the email is not found or password is incorrect.
