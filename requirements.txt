@@ -31,3 +31,6 @@ uvicorn
 uvloop
 watchfiles
 websockets
+python-jose[cryptography]
+passlib[bcrypt]
+pydantic[email]
