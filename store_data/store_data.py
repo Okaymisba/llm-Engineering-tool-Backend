@@ -1,30 +1,31 @@
-from store_data.database import Database
+from sqlalchemy.orm import Session
+from models.api_list import APIList
+from models.__init__ import engine
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
 
-def store_user_data(user_id, api_key, document_text, instructions):
+def store_user_data(user_id: int, api_key: str, document_text: str, instructions: str = None) -> APIList:
     """
     Stores user data, including user ID, API key, document text, and specific instructions,
-    in the API list table of the database.
+    in the API list table of the database using SQLAlchemy ORM.
 
-    :param user_id: The unique identifier for the user.
-    :type user_id: int
-    :param api_key: The API key associated with the user.
-    :type api_key: str
-    :param document_text: The content of the document associated with the user data.
-    :type document_text: str
-    :param instructions: Specific instructions or metadata related to the document.
-    :type instructions: str
-    :return: None
+    Args:
+        user_id (int): The unique identifier for the user
+        api_key (str): The API key associated with the user
+        document_text (str): The content of the document associated with the user data
+        instructions (str, optional): Specific instructions or metadata related to the document
+
+    Returns:
+        APIList: The created API entry
     """
-
-    db = Database(dbname=os.getenv("DB_NAME"), user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD"))
-    db.connect()
-    db.execute_query(
-        "INSERT INTO api_list (main_table_user_id, api_key, document_data, instructions) VALUES (%s, %s, %s, %s)",
-        (user_id, api_key, document_text, instructions)
-    )
-    db.close()
+    with Session(engine) as db:
+        return APIList.create_api_entry(
+            db=db,
+            main_table_user_id=user_id,
+            api_key=api_key,
+            document_data=document_text,
+            instructions=instructions
+        )

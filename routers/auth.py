@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from models.user import User, get_db, User as UserModel
+from models.user import User, User as UserModel
+from models.__init__ import get_db
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 from typing import Annotated
@@ -9,11 +10,11 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 
+
 router = APIRouter(
     prefix='/auth',
     tags=['auth']
 )
-
 
 # JWT Configurations
 SECRET_KEY = "bx87wd8uh298ci87cj0982u09djcuh98ciuv8749"
