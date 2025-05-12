@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from models.user import User, get_db, User as UserModel
+from models.user import User, User as UserModel
+from models.__init__ import get_db
 from pydantic import BaseModel, EmailStr
-
 
 router = APIRouter()
 
@@ -65,8 +65,8 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 async def login_user(
-    login_data: LoginRequest,
-    db: Session = Depends(get_db)
+        login_data: LoginRequest,
+        db: Session = Depends(get_db)
 ):
     """
     Authenticates a user with their email and password.
