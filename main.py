@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from models.user import init_db
+from models.__init__ import init_db
 from routers import auth
 
 from routers import upload_custom_model, ask
