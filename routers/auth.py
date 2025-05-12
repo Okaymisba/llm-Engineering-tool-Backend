@@ -147,7 +147,7 @@ async def login_for_access_token(
     Raises:
         HTTPException: If the email is not found or password is incorrect.
     """
-    user = db.query(User).filter(User.email == form_data.username).first()
+    user = db.query(User).filter(User.email == form_data.email).first()
     if not user or not user.verify_password(form_data.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
