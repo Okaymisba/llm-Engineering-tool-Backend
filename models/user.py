@@ -1,20 +1,43 @@
+"""
+User Model Module
+
+This module defines the User model with password hashing capabilities and database
+interaction. It provides functionality for user authentication and management.
+
+Dependencies:
+    - SQLAlchemy for ORM
+    - passlib for password hashing
+    - python-dotenv for environment variable management
+"""
+
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from passlib.context import CryptContext
 import os
 from dotenv import load_dotenv
 
+from models.__init__ import Base
+
 load_dotenv()
 
-# Password hashing context
+# Password hashing context for secure password management
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Create base class for declarative models
-Base = declarative_base()
 
 
 class User(Base):
+    """
+    User model for managing user accounts and authentication.
+
+    Attributes:
+        id (int): Primary key for user identification
+        username (str): Unique username for the user
+        email (str): Unique email address
+        hashed_password (str): BCrypt hashed password
+        api_keys (relationship): One-to-many relationship with APIList model
+
+    The model includes methods for password hashing and verification using BCrypt.
+    """
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -22,32 +45,29 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
 
+    api_keys = relationship("APIList", back_populates="user")
+
     @staticmethod
     def get_password_hash(password: str) -> str:
+        """
+        Generate a BCrypt hash for a given password.
+
+        Args:
+            password: Plain text password to hash
+
+        Returns:
+            str: BCrypt hashed password
+        """
         return pwd_context.hash(password)
 
     def verify_password(self, plain_password: str) -> bool:
+        """
+        Verify a plain text password against the stored hash.
+
+        Args:
+            plain_password: Plain text password to verify
+
+        Returns:
+            bool: True if password matches, False otherwise
+        """
         return pwd_context.verify(plain_password, self.hashed_password)
-
-
-# Database connection
-DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME')}"
-
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create tables if they don't exist
-
-
-def init_db():
-    Base.metadata.create_all(bind=engine)
-
-# Dependency to get DB session
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

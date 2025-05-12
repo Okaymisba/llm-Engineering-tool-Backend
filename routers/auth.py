@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from models.user import User, get_db, User as UserModel
+from models.user import User, User as UserModel
+from models.__init__ import get_db
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 from typing import Annotated
@@ -10,6 +11,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from dotenv import load_dotenv
 import os
+
 
 router = APIRouter(
     prefix='/auth',
