@@ -8,17 +8,20 @@ from starlette import status
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
+from dotenv import load_dotenv
+import os
 
 router = APIRouter(
     prefix='/auth',
     tags=['auth']
 )
 
+load_dotenv()
 
 # JWT Configurations
-SECRET_KEY = "bx87wd8uh298ci87cj0982u09djcuh98ciuv8749"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
@@ -102,6 +105,14 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
+        )
+    
+    # Check if username already exists
+    db_username = db.query(User).filter(User.username == user.username).first()
+    if db_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
         )
 
     # Create new user with hashed password
