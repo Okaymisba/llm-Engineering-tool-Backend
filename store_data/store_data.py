@@ -15,20 +15,29 @@ load_dotenv()
 
 def store_user_data(user_id: int, api_key: str, document_text: str, instructions: str = None) -> APIList:
     """
-    Stores user data by:
-    1. Inserting into the 'documents' table.
-    2. Using the document_id to create an entry in the 'api_list' table.
-    3. Using the document_id to create an entry in the 'embeddings' table.
+    Stores user data into several database tables and generates embeddings for the
+    provided document text. The function performs the following operations:
+    - Splits the input `document_text` into chunks.
+    - Inserts user details and document metadata into the 'documents' table.
+    - Associates the generated document ID with the API entry.
+    - Computes embedding vectors for each chunk of the `document_text` and stores
+      them in the 'embeddings' table.
 
-    Args:
-        user_id (int): The unique identifier for the user
-        api_key (str): The API key associated with the user
-        document_text (str): The content of the document associated with the user data
-        embedding_data (bytes): The embedding data to be stored for the document
-        instructions (str, optional): Specific instructions or metadata related to the document
+    Also, updates the relevant entries to properly link API and document details.
 
-    Returns:
-        APIList: The created API entry
+    :param user_id: The identifier of the user submitting the data.
+    :type user_id: int
+    :param api_key: The API key provided by the user for authentication.
+    :type api_key: str
+    :param document_text: The complete text document to be processed and stored.
+    :type document_text: str
+    :param instructions: Optional instructions or metadata related to `document_text`.
+    :type instructions: str, optional
+    :return: APIList instance representing the created API entry, including all
+        associated data.
+    :rtype: APIList
+    :raises RuntimeError: If any error occurs during the database interaction or
+        data storage process.
     """
 
     chunk_text = chunk_document_text(document_text)

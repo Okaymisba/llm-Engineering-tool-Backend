@@ -1,3 +1,15 @@
+"""
+Documents Model Module
+
+This module defines the Documents model for managing document chunks in
+the database. It establishes a foreign key relationship with the APIList
+model and contains metadata for each document chunk.
+
+Dependencies:
+    - SQLAlchemy for ORM
+    - datetime for managing timestamps
+"""
+
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, ForeignKey, Text, DateTime
