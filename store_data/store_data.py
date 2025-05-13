@@ -44,7 +44,6 @@ def store_user_data(user_id: int, api_key: str, document_text: str, instructions
 
     with Session(engine) as db:
         try:
-            # Step 1: Insert into the 'documents' table
             api_entry = APIList.create_api_entry(
                 db=db,
                 main_table_user_id=user_id,
@@ -62,13 +61,9 @@ def store_user_data(user_id: int, api_key: str, document_text: str, instructions
                 db.commit()
                 db.refresh(document_entry)
 
-            # Get the generated document_id
             document_id = document_entry.document_id
-
-            # Step 2: Insert into the 'api_list' table using the document_id
-
-            # Link the document to the API entry
             api_entry.document_id = document_id
+
             db.commit()
 
             model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -78,12 +73,12 @@ def store_user_data(user_id: int, api_key: str, document_text: str, instructions
 
                 embedding_data = embedding.tobytes()
 
-                # Step 3: Insert into the 'embeddings' table using document_id
                 embedding_entry = Embeddings(
                     document_id=document_entry.api_id,
                     embedding=embedding_data
                 )
                 db.add(embedding_entry)
+
                 db.commit()
 
             return api_entry

@@ -29,30 +29,34 @@ def load_faiss_index(embeddings):
 @router.get("/ask/")
 def ask_question(api_key: str, question: str, db: Session = Depends(get_db)):
     """
-    Handles a request to ask a question, retrieves relevant document embeddings,
-    searches for the most similar document chunk using FAISS, generates a prompt,
-    and queries a local model for an answer.
+    Handles the `/ask/` endpoint by processing a question based on documents associated
+    with a provided API key. It retrieves relevant documents, calculates their embeddings,
+    performs similarity matching, and generates a response using a local model.
 
-    :param api_key: API key used for authentication or identification purposes.
+    :param api_key: The API key used for authentication and to identify associated documents.
     :type api_key: str
-    :param question: The question text to be processed and answered by the model.
+    :param question: The user's question to process and answer.
     :type question: str
-    :param db: Dependency-injected database session for database operations.
+    :param db: Database session dependency used for querying and processing data.
     :type db: Session
-    :return: A dictionary containing the success status and the generated answer.
+    :return: A dictionary containing the success status, the generated answer, and
+        the context used for generating the answer.
     :rtype: dict
+    :raises HTTPException:
+        - 403 if the API key is invalid or expired.
+        - 404 if no documents are found for the given API key.
+        - 404 if no embeddings for the associated documents are found.
+        - 500 if the FAISS index cannot be built or errors occur during processing.
     """
-    # Verify API Key validity
+
     api_entry = APIList.get_by_api_key(db, api_key)
     if not api_entry:
         raise HTTPException(status_code=403, detail="Invalid or expired API key.")
 
-    # Retrieve Documents linked to this API key
     documents = db.query(Documents).filter(Documents.api_id == api_entry.id).all()
     if not documents:
         raise HTTPException(status_code=404, detail="No documents found for the given API key.")
 
-    # Retrieve Embeddings for these Documents
     embeddings = []
     for document in documents:
         embedding_entry = db.query(Embeddings).filter(Embeddings.document_id == document.api_id).first()
@@ -62,24 +66,19 @@ def ask_question(api_key: str, question: str, db: Session = Depends(get_db)):
     if not embeddings:
         raise HTTPException(status_code=404, detail="No embeddings found for the associated documents.")
 
-    # Load FAISS index with document data
     try:
         index, id_map = load_faiss_index(embeddings)
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    # Embed the question into the same vector format (stubbed here)
-    # (Assume we pass the question through some embedding model to get its vector)
     question_embedding = np.random.rand(len(embeddings[0][1])).astype('float32')  # Placeholder for embedding
 
-    # Perform similarity search (find most similar document)
-    top_k = 3  # We only need the top result
+    top_k = 3
     distances, indices = index.search(np.expand_dims(question_embedding, axis=0), top_k)
 
-    # Retrieve the most relevant document info
     most_similar_documents = []
     for idx in indices[0]:
-        if idx != -1:  # Check if index is valid
+        if idx != -1:
             most_similar_doc_id = id_map.get(idx)
             if most_similar_doc_id:
                 document = db.query(Documents).filter(Documents.document_id == most_similar_doc_id).first()
@@ -89,17 +88,14 @@ def ask_question(api_key: str, question: str, db: Session = Depends(get_db)):
     if not most_similar_documents:
         raise HTTPException(status_code=500, detail="Could not retrieve the most similar document.")
 
-    # Generate the prompt using the most similar document chunk
     prompt_context = []
     for document in most_similar_documents:
         prompt_context.append(document.chunk_text)
     instructions = api_entry.instructions
     prompt = generate_prompt(api_key, question, prompt_context, instructions)
 
-    # Query the local model using the prompt
     response = query_local_model(prompt)
 
-    # Return the successful response
     return {
         "success": True,
         "answer": response,
