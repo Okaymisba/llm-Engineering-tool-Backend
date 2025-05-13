@@ -34,9 +34,6 @@ async def upload_document(
     :rtype: dict
     """
 
-    # TODO: Add a method for extracting the user id from the table user_data for now the user id is provided through
-    #  the form but its not right so after wasay finishes the authentications then it will be done
-
     upload_dir = f"./uploads/{current_user.id}"
     os.makedirs(upload_dir, exist_ok=True)
     file_path = os.path.join(upload_dir, file.filename)
