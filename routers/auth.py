@@ -1,16 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from models.user import User, User as UserModel
-from models.__init__ import get_db
-from pydantic import BaseModel, EmailStr
+import os
 from datetime import datetime, timedelta
 from typing import Annotated
-from starlette import status
-from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import jwt, JWTError
+
 from dotenv import load_dotenv
-import os
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+from pydantic import BaseModel, EmailStr
+from sqlalchemy.orm import Session
+from starlette import status
+
+from models.__init__ import get_db
+from models.user import User
 
 router = APIRouter(
     prefix='/auth',

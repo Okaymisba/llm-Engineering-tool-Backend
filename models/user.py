@@ -10,12 +10,10 @@ Dependencies:
     - python-dotenv for environment variable management
 """
 
-from sqlalchemy import Column, Integer, String, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from passlib.context import CryptContext
-import os
 from dotenv import load_dotenv
+from passlib.context import CryptContext
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
 
 from models.__init__ import Base
 

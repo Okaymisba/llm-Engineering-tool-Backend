@@ -2,9 +2,9 @@ import os
 import shutil
 from typing import Annotated
 
-from document_handling.document_handling import parse_document
-from fastapi import FastAPI, UploadFile, File, Form, APIRouter, Depends
+from fastapi import UploadFile, File, Form, APIRouter, Depends
 
+from document_handling.document_handling import parse_document
 from functions.generate_api_key.generate_api_key import generate_api_key
 from models.user import User
 from routers.auth import get_current_user

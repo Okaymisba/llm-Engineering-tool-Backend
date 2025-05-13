@@ -7,8 +7,10 @@ and their processing instructions.
 """
 
 from datetime import datetime
+
 from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship, Session
+
 from models.__init__ import Base
 
 

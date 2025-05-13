@@ -1,3 +1,5 @@
+import faiss
+import numpy as np
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -7,8 +9,6 @@ from models.documents import Documents
 from models.embeddings import Embeddings
 from prompt_generation.prompt_generation import generate_prompt
 from prompt_generation.query_local_model import query_local_model
-import numpy as np
-import faiss
 
 router = APIRouter()
 

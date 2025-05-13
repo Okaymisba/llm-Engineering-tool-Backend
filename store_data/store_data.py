@@ -1,12 +1,14 @@
 from datetime import datetime
+
+from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
+
+from functions.chunk_text.chunk_text import chunk_document_text
+from models.__init__ import engine
 from models.api_list import APIList
 from models.documents import Documents
 from models.embeddings import Embeddings
-from models.__init__ import engine
-from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
-from functions.chunk_text.chunk_text import chunk_document_text
 
 load_dotenv()
 
