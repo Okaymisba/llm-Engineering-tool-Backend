@@ -133,14 +133,14 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    form_data: LoginRequest,
     db: Session = Depends(get_db)
 ):
     """
     Authenticates a user with their email and password and returns a JWT token.
 
     Args:
-        form_data (OAuth2PasswordRequestForm): The login credentials (email and password).
+        form_data (LoginRequest) : The login credentials (email and password).
         db (Session): Database session.
 
     Returns:
