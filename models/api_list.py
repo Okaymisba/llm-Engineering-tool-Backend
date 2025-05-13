@@ -20,7 +20,7 @@ class APIList(Base):
         id (int): Primary key
         main_table_user_id (int): Foreign key to users table
         api_key (str): Unique API key for document access
-        document_data (str): Stored document text/content
+        document_id (int): Document identifier
         instructions (str): Processing instructions for the document
         created_at (datetime): Timestamp of API key creation
         last_used_at (datetime): Timestamp of last API key usage
@@ -31,12 +31,13 @@ class APIList(Base):
     id = Column(Integer, primary_key=True)
     main_table_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     api_key = Column(String(64), unique=True, nullable=False, index=True)
-    document_data = Column(Text)
+    document_id = Column(Integer)
     instructions = Column(Text)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     last_used_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="api_keys")
+    documents = relationship("Documents", back_populates="api", cascade="all, delete-orphan")
 
     @classmethod
     def get_by_api_key(cls, db: Session, api_key: str):
@@ -54,7 +55,7 @@ class APIList(Base):
 
     @classmethod
     def create_api_entry(cls, db: Session, main_table_user_id: int, api_key: str,
-                        document_data: str, instructions: str = None):
+                         instructions: str = None, document_id: int = None):
         """
         Create a new API key entry with associated document data.
 
@@ -62,8 +63,8 @@ class APIList(Base):
             db: SQLAlchemy database session
             main_table_user_id: User ID who owns this API key
             api_key: Unique API key string
-            document_data: Document text/content to be stored
             instructions: Optional processing instructions
+            document_id: Optional document identifier
 
         Returns:
             Newly created APIList object
@@ -71,8 +72,8 @@ class APIList(Base):
         api_entry = cls(
             main_table_user_id=main_table_user_id,
             api_key=api_key,
-            document_data=document_data,
-            instructions=instructions
+            instructions=instructions,
+            document_id=document_id
         )
         db.add(api_entry)
         db.commit()

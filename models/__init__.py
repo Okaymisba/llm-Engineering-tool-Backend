@@ -14,6 +14,7 @@ Environment Variables Required:
 
 import os
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
@@ -37,6 +38,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def init_db():
     """Initialize the database by creating all tables."""
     Base.metadata.create_all(bind=engine)
+    from models.documents import Documents
+    from models.embeddings import Embeddings
+    try:
+        Documents.__table__.create(bind=engine)
+        Embeddings.__table__.create(bind=engine)
+    except SQLAlchemyError as e:
+        print("Error creating tables:", e)
 
 
 def get_db():
