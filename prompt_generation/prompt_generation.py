@@ -1,7 +1,7 @@
 from store_data.database import Database
 
 
-def generate_prompt(api_key, question):
+def generate_prompt(api_key, question, prompt_context=None, instructions=None):
     """
     Generates a prompt based on user data retrieved from a database, including instructions,
     documents, and the provided question. The prompt is generated using the data associated
@@ -24,9 +24,6 @@ def generate_prompt(api_key, question):
     if not user_data:
         return "User data not found."
 
-    instructions = user_data["instructions"]
-    documents = user_data["document_data"]
-
     prompt = f"""
     Instructions: {instructions}
 
@@ -34,6 +31,6 @@ def generate_prompt(api_key, question):
     {question}
     
     You have the following information from the uploaded documents:
-    {documents}
+    {prompt_context}
     """
     return prompt
