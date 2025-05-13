@@ -6,7 +6,8 @@ from models.__init__ import Base
 class Embeddings(Base):
     __tablename__ = 'embeddings'
 
-    document_id = Column(Integer, ForeignKey('documents.document_id'), primary_key=True)
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey('api_list.id'))
     embedding = Column(LargeBinary)
 
-    document = relationship("Documents", back_populates="embeddings")
+    document = relationship("APIList", back_populates="embeddings")

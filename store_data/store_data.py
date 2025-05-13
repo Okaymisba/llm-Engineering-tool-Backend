@@ -5,8 +5,8 @@ from models.documents import Documents
 from models.embeddings import Embeddings
 from models.__init__ import engine
 from dotenv import load_dotenv
-import numpy as np
 from sentence_transformers import SentenceTransformer
+from functions.chunk_text.chunk_text import chunk_document_text
 
 load_dotenv()
 
@@ -28,45 +28,52 @@ def store_user_data(user_id: int, api_key: str, document_text: str, instructions
     Returns:
         APIList: The created API entry
     """
+
+    chunk_text = chunk_document_text(document_text)
+
     with Session(engine) as db:
         try:
             # Step 1: Insert into the 'documents' table
-            document_entry = Documents(
-                chunk_text=document_text,
-                created_at=datetime.utcnow()
-            )
-            db.add(document_entry)
-            db.commit()
-            db.refresh(document_entry)
-
-            # Get the generated document_id
-            document_id = document_entry.document_id
-
-            # Step 2: Insert into the 'api_list' table using the document_id
             api_entry = APIList.create_api_entry(
                 db=db,
                 main_table_user_id=user_id,
                 api_key=api_key,
                 instructions=instructions,
-                document_id=document_id
             )
 
+            for chunk in chunk_text:
+                document_entry = Documents(
+                    chunk_text=chunk,
+                    api_id=api_entry.id,
+                    created_at=datetime.utcnow()
+                )
+                db.add(document_entry)
+                db.commit()
+                db.refresh(document_entry)
+
+            # Get the generated document_id
+            document_id = document_entry.document_id
+
+            # Step 2: Insert into the 'api_list' table using the document_id
+
             # Link the document to the API entry
-            document_entry.api_id = api_entry.id
+            api_entry.document_id = document_id
             db.commit()
 
             model = SentenceTransformer('all-MiniLM-L6-v2')
-            embedding = model.encode(document_text)
 
-            embedding_data = embedding.tobytes()
+            for chunk in chunk_text:
+                embedding = model.encode(chunk)
 
-            # Step 3: Insert into the 'embeddings' table using document_id
-            embedding_entry = Embeddings(
-                document_id=document_id,
-                embedding=embedding_data
-            )
-            db.add(embedding_entry)
-            db.commit()
+                embedding_data = embedding.tobytes()
+
+                # Step 3: Insert into the 'embeddings' table using document_id
+                embedding_entry = Embeddings(
+                    document_id=document_entry.api_id,
+                    embedding=embedding_data
+                )
+                db.add(embedding_entry)
+                db.commit()
 
             return api_entry
 

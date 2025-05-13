@@ -18,8 +18,7 @@ class Documents(Base):
 
     document_id = Column(Integer, primary_key=True)
     chunk_text = Column(Text)
-    api_id = Column(Integer, ForeignKey('api_list.id'))
+    api_id = Column(Integer, ForeignKey('api_list.id'), unique=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     api = relationship("APIList", back_populates="documents")
-    embeddings = relationship("Embeddings", back_populates="document", cascade="all, delete-orphan")

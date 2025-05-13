@@ -13,29 +13,15 @@ import faiss
 router = APIRouter()
 
 
-def load_faiss_index(embeddings_data):
-    """
-    Load FAISS index with the given embeddings data.
-
-    :param embeddings_data: List of (document_id, embedding) tuples.
-    :type embeddings_data: list
-    :return: FAISS index and a mapping of document IDs to index positions.
-    :rtype: faiss.IndexFlatL2, dict
-    """
-    if not embeddings_data:
-        raise ValueError("No embeddings data available to load into FAISS.")
-
-    # Extract the embeddings and document IDs
-    document_ids = [item[0] for item in embeddings_data]
-    embeddings = np.vstack([item[1] for item in embeddings_data]).astype('float32')
-
-    # Build a FAISS index
-    dimension = embeddings.shape[1]  # Dimension of each embedding
+def load_faiss_index(embeddings):
+    # Initialize FAISS index
+    dimension = embeddings[0][1].shape[0]
     index = faiss.IndexFlatL2(dimension)
-    index.add(embeddings)
+    id_map = {}
 
-    # Map document IDs to FAISS index positions
-    id_map = {i: document_ids[i] for i in range(len(document_ids))}
+    for idx, (doc_id, embedding) in enumerate(embeddings):
+        index.add(np.expand_dims(embedding, axis=0))  # Add embeddings
+        id_map[idx] = doc_id  # Map FAISS index to document ID
 
     return index, id_map
 
@@ -69,7 +55,7 @@ def ask_question(api_key: str, question: str, db: Session = Depends(get_db)):
     # Retrieve Embeddings for these Documents
     embeddings = []
     for document in documents:
-        embedding_entry = db.query(Embeddings).filter(Embeddings.document_id == document.document_id).first()
+        embedding_entry = db.query(Embeddings).filter(Embeddings.document_id == document.api_id).first()
         if embedding_entry:
             embeddings.append((document.document_id, np.frombuffer(embedding_entry.embedding, dtype=np.float32)))
 
@@ -87,22 +73,26 @@ def ask_question(api_key: str, question: str, db: Session = Depends(get_db)):
     question_embedding = np.random.rand(len(embeddings[0][1])).astype('float32')  # Placeholder for embedding
 
     # Perform similarity search (find most similar document)
-    top_k = 1  # We only need the top result
+    top_k = 3  # We only need the top result
     distances, indices = index.search(np.expand_dims(question_embedding, axis=0), top_k)
 
     # Retrieve the most relevant document info
-    most_similar_index = indices[0][0]
-    if most_similar_index == -1:  # If search fails
-        raise HTTPException(status_code=404, detail="No similar documents found.")
+    most_similar_documents = []
+    for idx in indices[0]:
+        if idx != -1:  # Check if index is valid
+            most_similar_doc_id = id_map.get(idx)
+            if most_similar_doc_id:
+                document = db.query(Documents).filter(Documents.document_id == most_similar_doc_id).first()
+                if document:
+                    most_similar_documents.append(document)
 
-    most_similar_doc_id = id_map[most_similar_index]
-    most_similar_document = db.query(Documents).filter(Documents.document_id == most_similar_doc_id).first()
-
-    if not most_similar_document:
+    if not most_similar_documents:
         raise HTTPException(status_code=500, detail="Could not retrieve the most similar document.")
 
     # Generate the prompt using the most similar document chunk
-    prompt_context = most_similar_document.chunk_text
+    prompt_context = []
+    for document in most_similar_documents:
+        prompt_context.append(document.chunk_text)
     instructions = api_entry.instructions
     prompt = generate_prompt(api_key, question, prompt_context, instructions)
 

@@ -38,6 +38,7 @@ class APIList(Base):
 
     user = relationship("User", back_populates="api_keys")
     documents = relationship("Documents", back_populates="api", cascade="all, delete-orphan")
+    embeddings = relationship("Embeddings", back_populates="document", cascade="all, delete-orphan")
 
     @classmethod
     def get_by_api_key(cls, db: Session, api_key: str):
