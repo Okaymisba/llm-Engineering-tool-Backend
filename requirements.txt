@@ -34,3 +34,6 @@ websockets
 python-jose[cryptography]
 passlib[bcrypt]
 pydantic[email]
+faiss-cpu
+numpy
+sentence-transformers

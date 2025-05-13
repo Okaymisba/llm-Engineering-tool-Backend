@@ -1,7 +1,7 @@
+import docx
 import fitz
 import pytesseract
 from PIL import Image
-import docx
 
 
 def parse_pdf(file_path):
