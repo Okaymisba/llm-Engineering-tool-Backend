@@ -22,4 +22,4 @@ class Documents(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     api = relationship("APIList", back_populates="documents")
-    embeddings = relationship("Embeddings", back_populates="document")
+    embeddings = relationship("Embeddings", back_populates="document", cascade="all, delete-orphan")
