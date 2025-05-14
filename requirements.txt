@@ -37,3 +37,4 @@ pydantic[email]
 faiss-cpu
 numpy
 sentence-transformers
+openai
