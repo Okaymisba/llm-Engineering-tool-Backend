@@ -99,5 +99,5 @@ def ask_question(api_key: str, question: str, db: Session = Depends(get_db)):
     return {
         "success": True,
         "answer": response,
-        "context": prompt_context,  # Provide the context used for debugging
+        "context": prompt_context,
     }
