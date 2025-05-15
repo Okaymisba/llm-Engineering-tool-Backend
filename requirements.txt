@@ -38,3 +38,4 @@ faiss-cpu
 numpy
 sentence-transformers
 openai
+ultralytics
