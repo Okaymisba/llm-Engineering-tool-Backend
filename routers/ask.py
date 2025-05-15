@@ -13,14 +13,13 @@ router = APIRouter()
 
 
 def load_faiss_index(embeddings):
-    # Initialize FAISS index
     dimension = embeddings[0][1].shape[0]
     index = faiss.IndexFlatL2(dimension)
     id_map = {}
 
     for idx, (doc_id, embedding) in enumerate(embeddings):
-        index.add(np.expand_dims(embedding, axis=0))  # Add embeddings
-        id_map[idx] = doc_id  # Map FAISS index to document ID
+        index.add(np.expand_dims(embedding, axis=0))
+        id_map[idx] = doc_id
 
     return index, id_map
 
@@ -63,7 +62,7 @@ def ask_question(api_key: str, provider: str, model: str, question: str, db: Ses
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    question_embedding = np.random.rand(len(embeddings[0][1])).astype('float32')  # Placeholder for embedding
+    question_embedding = np.random.rand(len(embeddings[0][1])).astype('float32')
 
     top_k = 3
     distances, indices = index.search(np.expand_dims(question_embedding, axis=0), top_k)

@@ -6,7 +6,7 @@ from response.google.query_google_model import query_google_model
 from response.openai.query_openai_model import query_openai_model
 
 
-def generate_response(provider: str, model: str, question: str, prompt_context=None, instructions=None):
+def generate_response(provider: str, model: str, question: str, prompt_context: list = None, instructions=None):
     """
     Generates a response from the given AI model and provider based on the input question,
     prompt context, and optional instructions. The function determines the appropriate
