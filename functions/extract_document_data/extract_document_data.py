@@ -1,3 +1,5 @@
+import os
+
 from functions.extract_document_data.parse_docx import parse_docx
 from functions.extract_document_data.parse_pdf import parse_pdf
 from functions.extract_document_data.parse_txt_file import parse_txt_file
@@ -22,11 +24,13 @@ async def extract_document_data(document):
 
     content_type = document.content_type
 
-    if content_type == 'application/pdf':
+    _, file_extension = os.path.splitext(document.filename)
+
+    if content_type == 'application/pdf' or file_extension == '.pdf':
         return parse_pdf(file_data)
-    elif content_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    elif content_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' or file_extension == '.docx':
         return parse_docx(file_data)
-    elif content_type == "text/plain":
+    elif content_type == "text/plain" or file_extension == '.txt':
         return parse_txt_file(file_data)
     else:
         return None
