@@ -1,7 +1,5 @@
 import docx
 import fitz
-import pytesseract
-from PIL import Image
 
 
 def parse_pdf(file_path):
@@ -47,25 +45,6 @@ def parse_docx(file_path):
     return "\n".join([para.text for para in doc.paragraphs])
 
 
-def parse_image(file_path):
-    """
-    Parses text from an image file using Optical Character Recognition (OCR).
-
-    This function takes the file path of an image as input, opens the image,
-    and extracts readable text from it using the pytesseract OCR library. It
-    is assumed that the image contains text data that can be processed by
-    OCR.
-
-    :param file_path: The path to the image file to be processed.
-    :type file_path: str
-    :return: Extracted text from the image.
-    :rtype: str
-    """
-
-    image = Image.open(file_path)
-    return pytesseract.image_to_string(image)
-
-
 def parse_document(file_path):
     """
     Parses a document based on its file type. The function identifies the file
@@ -84,7 +63,5 @@ def parse_document(file_path):
         return parse_pdf(file_path)
     elif file_path.endswith('.docx'):
         return parse_docx(file_path)
-    elif file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
-        return parse_image(file_path)
     else:
         raise ValueError("Unsupported file type.")

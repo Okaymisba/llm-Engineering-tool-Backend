@@ -3,24 +3,29 @@ from pytesseract import pytesseract
 from ultralytics import YOLO
 
 
-def extract_image_data(image_path):
+def extract_image_data(image):
     """
-    Extracts text and detected objects from an image using YOLO model and Tesseract OCR library.
+    Extracts textual and object detection data from a given image.
 
-    This function opens the given image file, extracts any textual content found in the image using
-    the Tesseract OCR library, and uses the YOLO model to identify objects in the image. Identified
-    objects contain information about their label and confidence score.
+    This function uses the YOLO model for object detection and PyTesseract
+    for Optical Character Recognition (OCR) to extract text and detected
+    objects from an image. It processes the image input, performs OCR to
+    obtain the textual content, and identifies objects detected in the image
+    along with their respective labels and confidence scores.
 
-    :param image_path: The file path to the image to process.
-    :type image_path: str
+    :param image: The image file path to be processed.
 
-    :return: A dictionary with extracted text data and a list of detected objects. Each detected
-             object contains a `label` (str) and `confidence` (float) rounded to two decimal places.
-    :rtype: dict
+    :return: A dictionary containing two keys:
+        - "image_text": The textual content extracted from the image.
+        - "detected_objects": A list of dictionaries, where each dictionary
+          contains:
+            - "label": The label of the detected object.
+            - "confidence": The confidence score of the detection, rounded to
+              two decimal places.
     """
 
     model = YOLO("yolov8n.pt")
-    image = Image.open(image_path)
+    image = Image.open(image)
     image_text = pytesseract.image_to_string(image)
 
     results = model.predict(image)
