@@ -3,6 +3,7 @@ from typing import Optional, Annotated
 from fastapi import APIRouter, File, UploadFile, Depends
 from pydantic import BaseModel
 
+from functions.extract_document_data.extract_document_data import extract_document_data
 from functions.extract_image_data.extract_image_data import extract_image_data
 from models.user import User
 from routers.auth import get_current_user
@@ -31,6 +32,6 @@ async def chat(data: Chat,
             image_data.append(extract_image_data(image.file))
     if data.upload_document:
         for document in data.upload_document:
-            return document
+            document_data.append(extract_document_data(document.file))
         return None
     return None
