@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from dotenv import load_dotenv
@@ -64,9 +64,9 @@ class LoginRequest(BaseModel):
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy();
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -96,17 +96,22 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
     """
-    Creates a new user with the given username, email and password.
+    Handles user registration by creating a new user in the database. It checks for
+    the uniqueness of both email and username before creating the user. If the provided
+    email or username is already registered, an error response will be generated.
 
-    Args:
-        user (UserCreate): The user information to be registered.
+    :param user: Contains the user details required for registration such as email,
+        username, and password. Must conform to the `UserCreate` schema.
+    :type user: UserCreate
 
-    Returns:
-        UserResponse: The registered user information.
+    :param db: Database session dependency used to query and modify the database table.
+    :type db: Session
 
-    Raises:
-        HTTPException: If the user's email is already registered.
+    :return: The created user object including the username, email, and hashed password
+        as stored in the database.
+    :rtype: User
     """
+
     # Check if user already exists
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
