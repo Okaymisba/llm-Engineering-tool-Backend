@@ -1,10 +1,8 @@
-import os
-import shutil
 from typing import Annotated
 
 from fastapi import UploadFile, File, Form, APIRouter, Depends
 
-from document_handling.document_handling import parse_document
+from functions.extract_document_data.extract_document_data import extract_document_data
 from functions.generate_api_key.generate_api_key import generate_api_key
 from models.user import User
 from routers.auth import get_current_user
@@ -20,35 +18,26 @@ async def upload_document(
         file: UploadFile = File(None)
 ):
     """
-    Handles the upload and storage of a document for the authenticated user, processes the document,
-    and stores the extracted text alongside additional information.
+    Uploads a document, processes its contents, and stores it alongside user data.
 
-    :param current_user: Annotated parameter for the authenticated user object,
-        fetched using the dependency injection mechanism of `Depends(get_current_user)`.
+    This operation extracts textual data from an uploaded file, associates it with
+    the currently authenticated user, generates an API key for storing the data,
+    and saves the data with optional user-provided instructions.
+
+    :param current_user: The authenticated user performing the document upload.
     :type current_user: User
-    :param instructions: Optional textual instructions for processing or storing the document.
+    :param instructions: Additional guidelines or notes for processing the
+        document. Default is None.
     :type instructions: str
-    :param file: Uploaded document file whose content is processed and stored.
+    :param file: The document file to be uploaded and processed. Default is None.
     :type file: UploadFile
-    :return: JSON response with a success status and a message indicating the result of the operation.
+    :return: A dictionary containing the success status and a message indicating
+        that the data has been successfully uploaded and stored.
     :rtype: dict
     """
 
-    upload_dir = f"./uploads/{current_user.id}"
-    os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, file.filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    document_text = await extract_document_data(file)
 
-    try:
-        document_text = parse_document(file_path)
-
-        api_key = generate_api_key()
-        store_user_data(current_user.id, api_key, document_text, instructions)
-        return {"success": True, "message": "Data uploaded and stored successfully."}
-
-    finally:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        if os.path.exists(upload_dir):
-            os.removedirs(upload_dir)
+    api_key = generate_api_key()
+    store_user_data(current_user.id, api_key, document_text, instructions)
+    return {"success": True, "message": "Data uploaded and stored successfully."}
