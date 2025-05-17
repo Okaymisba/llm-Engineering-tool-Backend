@@ -10,9 +10,6 @@ def parse_pdf(file_stream):
     the function concatenates them and removes any leading or trailing whitespace
     before returning the result.
 
-    .. note::
-       This function requires the `PyMuPDF` library (`fitz` module) to process PDF files.
-
     :param file_stream: A binary stream representing the PDF file to be parsed.
     :type file_stream: io.BytesIO or similar binary stream object
     :return: A string containing the concatenated plain text extracted from all pages

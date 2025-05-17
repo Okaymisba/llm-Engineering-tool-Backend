@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
@@ -55,7 +55,7 @@ def store_user_data(user_id: int, api_key: str, document_text: str, instructions
                 document_entry = Documents(
                     chunk_text=chunk,
                     api_id=api_entry.id,
-                    created_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc)
                 )
                 db.add(document_entry)
                 db.commit()

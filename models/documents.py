@@ -10,7 +10,7 @@ Dependencies:
     - datetime for managing timestamps
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, Integer, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
@@ -33,6 +33,6 @@ class Documents(Base):
     document_id = Column(Integer, primary_key=True)
     chunk_text = Column(Text)
     api_id = Column(Integer, ForeignKey('api_list.id'), unique=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
 
     api = relationship("APIList", back_populates="documents")

@@ -6,7 +6,7 @@ It provides functionality for storing and retrieving API keys linked to user doc
 and their processing instructions.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship, Session
@@ -35,7 +35,7 @@ class APIList(Base):
     api_key = Column(String(64), unique=True, nullable=False, index=True)
     document_id = Column(Integer)
     instructions = Column(Text)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     last_used_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="api_keys")
