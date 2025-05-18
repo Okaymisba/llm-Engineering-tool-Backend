@@ -1,21 +1,23 @@
-import random
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from dotenv import load_dotenv
-import smtplib
 import os
+import random
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
 sender_email = os.getenv("SENDER_EMAIL")
 app_password = os.getenv("EMAIL_APP_PASSWORD")
 
+
 def generate_OTP(length=6):
-    otp = ''.join([str(random.randint(0,9)) for _ in range(length)])
-    return otp 
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(length)])
+    return otp
+
 
 def send_email(reciever_email, subject, body):
-
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = reciever_email
@@ -23,7 +25,6 @@ def send_email(reciever_email, subject, body):
     msg.attach(MIMEText(body, 'plain'))
 
     try:
-        # Setup SMTP connection
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(sender_email, app_password)
