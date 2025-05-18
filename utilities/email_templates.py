@@ -1,5 +1,3 @@
-from email_service import generate_OTP
-
 def create_login_opt_msg(username, otp):
     return f"""Hello {username},
 

@@ -1,7 +1,9 @@
-import os
 import logging
+import os
+import re
 from datetime import datetime, timedelta
-from typing import Annotated, Optional
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -9,14 +11,12 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, constr
 from sqlalchemy.orm import Session
 from starlette import status
-from utilities.email_service import generate_OTP, send_email
-from utilities.email_templates import create_login_opt_msg
+
 from models.__init__ import get_db
 from models.user import User
-from fastapi.security import OAuth2PasswordRequestForm
-import re
+from utilities.email_service import generate_OTP, send_email
+from utilities.email_templates import create_login_opt_msg
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -25,19 +25,17 @@ router = APIRouter(
     tags=['auth']
 )
 
-# Load environment variables
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "5"))
 MAX_OTP_ATTEMPTS = int(os.getenv("MAX_OTP_ATTEMPTS", "3"))
 
-# Password validation regex
 PASSWORD_REGEX = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$")
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
-# Store OTPs with expiration
+
 class OTPData:
     """
     Class to store OTP data with expiration and attempt tracking.
@@ -47,14 +45,17 @@ class OTPData:
         expiry (datetime): When the OTP expires
         attempts (int): Number of failed attempts to use this OTP
     """
+
     def __init__(self, otp: str, expiry: datetime, attempts: int = 0):
         self.otp = otp
         self.expiry = expiry
         self.attempts = attempts
 
+
 CURRENT_OTPS: dict[str, OTPData] = {}
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
 
 class Token(BaseModel):
     """
@@ -69,6 +70,7 @@ class Token(BaseModel):
     token_type: str
     expires_in: int
 
+
 class TokenData(BaseModel):
     """
     Token data model for JWT payload.
@@ -77,6 +79,7 @@ class TokenData(BaseModel):
         email (str): User's email address
     """
     email: str | None = None
+
 
 class UserCreate(BaseModel):
     """
@@ -104,6 +107,7 @@ class UserCreate(BaseModel):
         """
         return bool(PASSWORD_REGEX.match(password))
 
+
 class UserResponse(BaseModel):
     """
     User response model.
@@ -122,6 +126,7 @@ class UserResponse(BaseModel):
     class Config:
         orm_mode = True
 
+
 class LoginRequest(BaseModel):
     """
     Login request model.
@@ -132,6 +137,7 @@ class LoginRequest(BaseModel):
     """
     email: EmailStr
     password: str
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
@@ -153,9 +159,10 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: Session = Depends(get_db)
+        token: Annotated[str, Depends(oauth2_scheme)],
+        db: Session = Depends(get_db)
 ) -> User:
     """
     Validates JWT token and returns the current user.
@@ -189,6 +196,7 @@ async def get_current_user(
         raise credentials_exception
     return user
 
+
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
     """
@@ -210,11 +218,10 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
             detail="Password must be at least 8 characters long and contain letters, numbers, and special characters"
         )
 
-    # Check if user already exists using a single query
     existing_user = db.query(User).filter(
         (User.email == user.email) | (User.username == user.username)
     ).first()
-    
+
     if existing_user:
         if existing_user.email == user.email:
             raise HTTPException(
@@ -245,10 +252,11 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
             detail="Error creating user"
         )
 
+
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: LoginRequest,
-    db: Session = Depends(get_db)
+        form_data: LoginRequest,
+        db: Session = Depends(get_db)
 ):
     """
     Authenticates user and returns JWT token.
@@ -281,7 +289,7 @@ async def login_for_access_token(
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    
+
     logger.info(f"User logged in: {user.email}")
     return {
         "access_token": access_token,
@@ -289,11 +297,12 @@ async def login_for_access_token(
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
 
+
 @router.get("/get-otp")
 async def get_otp(
-    email: str,
-    username: str,
-    request: Request
+        email: str,
+        username: str,
+        request: Request
 ):
     """
     Generates and sends OTP to user's email.
@@ -320,7 +329,7 @@ async def get_otp(
 
     otp = generate_OTP()
     msg = create_login_opt_msg(username, otp)
-    
+
     try:
         send_email(email, "Your One-Time Password (OTP) for Account Registration", msg)
         CURRENT_OTPS[email] = OTPData(
@@ -336,11 +345,12 @@ async def get_otp(
             detail="Error sending OTP"
         )
 
+
 @router.post("/verify-otp")
 async def verify_otp(
-    email: str,
-    otp: int,
-    db: Session = Depends(get_db)
+        email: str,
+        otp: int,
+        db: Session = Depends(get_db)
 ):
     """
     Verifies OTP and marks user as verified.
@@ -363,7 +373,7 @@ async def verify_otp(
         )
 
     otp_data = CURRENT_OTPS[email]
-    
+
     if datetime.utcnow() > otp_data.expiry:
         del CURRENT_OTPS[email]
         raise HTTPException(
@@ -391,9 +401,10 @@ async def verify_otp(
         del CURRENT_OTPS[email]
         logger.info(f"User verified: {email}")
         return {"success": True, "message": "User verified successfully"}
-    
+
     otp_data.attempts += 1
     return {"success": False, "message": "Incorrect OTP"}
+
 
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(current_user: Annotated[User, Depends(get_current_user)]):
@@ -407,5 +418,3 @@ async def read_users_me(current_user: Annotated[User, Depends(get_current_user)]
         UserResponse: User information
     """
     return current_user
-
-
