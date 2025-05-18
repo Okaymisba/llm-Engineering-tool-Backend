@@ -42,6 +42,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    is_verified = Column(bool, default=False)
 
     api_keys = relationship("APIList", back_populates="user")
 
