@@ -42,11 +42,13 @@ def init_db():
     from models.embeddings import Embeddings
     from models.user import User
     from models.api_list import APIList
+    from models.chat_sessions import ChatSession
     try:
-        APIList.__table__.create(bind=engine)
         User.__table__.create(bind=engine)
+        APIList.__table__.create(bind=engine)
         Documents.__table__.create(bind=engine)
         Embeddings.__table__.create(bind=engine)
+        ChatSession.__table__.create(bind=engine)
     except SQLAlchemyError as e:
         print("Error creating tables:", e)
 

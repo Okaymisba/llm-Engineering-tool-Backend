@@ -45,6 +45,7 @@ class User(Base):
     is_verified = Column(bool, default=False)
 
     api_keys = relationship("APIList", back_populates="user")
+    chat_sessions = relationship("ChatSession", back_populates="user")
 
     @staticmethod
     def get_password_hash(password: str) -> str:
