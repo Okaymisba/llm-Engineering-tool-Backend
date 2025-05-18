@@ -17,10 +17,10 @@ def generate_OTP(length=6):
     return otp
 
 
-def send_email(reciever_email, subject, body):
+def send_email(receiver_email, subject, body):
     msg = MIMEMultipart()
     msg['From'] = sender_email
-    msg['To'] = reciever_email
+    msg['To'] = receiver_email
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
 
