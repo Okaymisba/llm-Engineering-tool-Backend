@@ -39,3 +39,4 @@ numpy
 sentence-transformers
 openai
 ultralytics
+langchain

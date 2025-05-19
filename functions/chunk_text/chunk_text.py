@@ -1,3 +1,5 @@
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 def chunk_document_text(text, chunk_size=200):
     """
     Divides the input text into smaller chunks of specified size.
@@ -9,24 +11,27 @@ def chunk_document_text(text, chunk_size=200):
     if not text:
         return []
 
-    words = text.split()
-    chunks = []
-    current_chunk = []
+    # words = text.split()
+    # chunks = []
+    # current_chunk = []
 
-    current_length = 0
+    # current_length = 0
 
-    for word in words:
-        # Check if adding the word exceeds the chunk size
-        if current_length + len(word) + 1 > chunk_size:
-            chunks.append(" ".join(current_chunk))
-            current_chunk = []
-            current_length = 0
+    # for word in words:
+    #     # Check if adding the word exceeds the chunk size
+    #     if current_length + len(word) + 1 > chunk_size:
+    #         chunks.append(" ".join(current_chunk))
+    #         current_chunk = []
+    #         current_length = 0
 
-        current_chunk.append(word)
-        current_length += len(word) + 1  # Add 1 for the space
+    #     current_chunk.append(word)
+    #     current_length += len(word) + 1  # Add 1 for the space
 
-    # Append the last chunk if it exists
-    if current_chunk:
-        chunks.append(" ".join(current_chunk))
+    # # Append the last chunk if it exists
+    # if current_chunk:
+    #     chunks.append(" ".join(current_chunk))
+
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = text_splitter.split_text(text)
 
     return chunks
