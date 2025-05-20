@@ -34,7 +34,3 @@ def send_email(receiver_email, subject, body):
     except Exception as e:
         print(f"Failed to send OTP. Error: {e}")
         return e
-
-
-otp = generate_OTP()
-send_email("soomroabdul12345@gmail.com", "Your OTP Code", f"Your OTP is: {otp}. It is valid for 5 minutes.")
