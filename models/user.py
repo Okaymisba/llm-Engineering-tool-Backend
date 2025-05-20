@@ -12,7 +12,7 @@ Dependencies:
 
 from dotenv import load_dotenv
 from passlib.context import CryptContext
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 
 from models.__init__ import Base
@@ -42,7 +42,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    is_verified = Column(bool, default=False)
+    is_verified = Column(Boolean, default=False)
 
     api_keys = relationship("APIList", back_populates="user")
     chat_sessions = relationship("ChatSession", back_populates="user")
