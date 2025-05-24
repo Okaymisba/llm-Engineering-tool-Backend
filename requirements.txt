@@ -40,3 +40,4 @@ sentence-transformers
 openai
 ultralytics
 langchain
+langchain-text-splitters
