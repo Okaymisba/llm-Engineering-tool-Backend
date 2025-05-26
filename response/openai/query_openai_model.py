@@ -54,9 +54,9 @@ def query_openai_model(model, question, prompt_context=None, instructions=None, 
 
     messages.append({"role": "user", "content": question})
 
-    response = openai.completions.create(
+    response = openai.chat.completions.create(
         model=model,
-        prompt=messages
+        messages=messages
     )
 
-    return response["choices"][0]["message"]["content"], response["usage"]["total_tokens"]
+    return response.choices[0].message.content, response.usage.total_tokens

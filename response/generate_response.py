@@ -57,21 +57,21 @@ def generate_response(
         else:
             response = query_local_model(generate_prompt(question, prompt_context, instructions, image_data, document_data))
 
-        # Count tokens for question and response
-        question_tokens = count_tokens(question, model)
-        response_tokens = count_tokens(response, model)
-
-        # Count tokens for prompt context if present
-        context_tokens = 0
-        if prompt_context:
-            for context in prompt_context:
-                context_tokens += count_tokens(context, model)
 
         # Calculate total tokens used
         if provider == "openai":
-            # Use the token count directly from OpenAI's response
-            total_tokens_used = total_tokens_used
+            
+            pass  # total_tokens_used is already set from the API response
         else:
+            # Count tokens for question and response
+            question_tokens = count_tokens(question, model)
+            response_tokens = count_tokens(response, model)
+
+            # Count tokens for prompt context if present
+            context_tokens = 0
+            if prompt_context:
+                for context in prompt_context:
+                    context_tokens += count_tokens(context, model)
             total_tokens_used = question_tokens + response_tokens + context_tokens
 
         # Update token usage in database
