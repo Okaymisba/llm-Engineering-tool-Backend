@@ -41,3 +41,6 @@ openai
 ultralytics
 langchain
 langchain-text-splitters
+anthropic
+tiktoken
+transformers

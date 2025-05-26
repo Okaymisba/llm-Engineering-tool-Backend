@@ -44,7 +44,8 @@ async def chat(
         model=model,
         question=question,
         image_data=image_data,
-        document_data=document_data
+        document_data=document_data,
+        user_id=current_user.id
     )
 
     chat_session = ChatSession(

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from passlib.context import CryptContext
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
-
+import os
 from models.__init__ import Base
 
 load_dotenv()
@@ -43,6 +43,9 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_verified = Column(Boolean, default=False)
+    total_tokens = Column(Integer, default=os.getenv("FREE_TOKENS"))
+    tokens_used = Column(Integer, default=0)
+    tokens_remaining = Column(Integer, default=os.getenv("FREE_TOKENS"))
 
     api_keys = relationship("APIList", back_populates="user")
     chat_sessions = relationship("ChatSession", back_populates="user")
