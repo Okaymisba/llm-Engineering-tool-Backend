@@ -59,4 +59,4 @@ def query_openai_model(model, question, prompt_context=None, instructions=None, 
         prompt=messages
     )
 
-    return response["choices"][0]["message"]["content"]
+    return response["choices"][0]["message"]["content"], response["usage"]["total_tokens"]

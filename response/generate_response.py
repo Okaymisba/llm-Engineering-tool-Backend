@@ -49,7 +49,7 @@ def generate_response(
         if provider == "deepseek":
             response = query_deepseek_model(model, question, prompt_context, instructions, image_data, document_data)
         elif provider == "openai":
-            response = query_openai_model(model, question, prompt_context, instructions, image_data, document_data)
+            response, total_tokens_used = query_openai_model(model, question, prompt_context, instructions, image_data, document_data)
         elif provider == "anthropic":
             response = query_anthropic_model(model, question, prompt_context, instructions, image_data, document_data)
         elif provider == "google":
@@ -58,17 +58,21 @@ def generate_response(
             response = query_local_model(generate_prompt(question, prompt_context, instructions, image_data, document_data))
 
         # Count tokens for question and response
-        question_tokens = count_tokens(question, provider, model)
-        response_tokens = count_tokens(response, provider, model)
+        question_tokens = count_tokens(question, model)
+        response_tokens = count_tokens(response, model)
 
         # Count tokens for prompt context if present
         context_tokens = 0
         if prompt_context:
             for context in prompt_context:
-                context_tokens += count_tokens(context, provider, model)
+                context_tokens += count_tokens(context, model)
 
         # Calculate total tokens used
-        total_tokens_used = question_tokens + response_tokens + context_tokens
+        if provider == "openai":
+            # Use the token count directly from OpenAI's response
+            total_tokens_used = total_tokens_used
+        else:
+            total_tokens_used = question_tokens + response_tokens + context_tokens
 
         # Update token usage in database
         db = next(get_db())
