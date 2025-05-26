@@ -60,7 +60,7 @@ def ask_question(api_key: str, provider: str, model: str, question: str, db: Ses
 
     instructions = api_entry.instructions
 
-    response = generate_response(provider, model, question, prompt_context, instructions)
+    response = generate_response(provider, model, question, prompt_context, instructions, api_key)
 
     return {
         "success": True,

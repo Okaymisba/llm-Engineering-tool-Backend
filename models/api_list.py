@@ -10,9 +10,11 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship, Session
-
+import os
+from dotenv import load_dotenv
 from models.__init__ import Base
 
+load_dotenv()
 
 class APIList(Base):
     """
@@ -37,6 +39,9 @@ class APIList(Base):
     instructions = Column(Text)
     created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     last_used_at = Column(DateTime, nullable=True)
+    total_tokens = Column(Integer, default=os.getenv("FREE_TOKENS"))
+    tokens_used = Column(Integer, default=0)
+    tokens_remaining = Column(Integer, default=os.getenv("FREE_TOKENS"))
 
     user = relationship("User", back_populates="api_keys")
     documents = relationship("Documents", back_populates="api", cascade="all, delete-orphan")
