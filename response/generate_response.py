@@ -5,6 +5,7 @@ from response.deepseek.query_deepseek_model import query_deepseek_model
 from response.google.query_google_model import query_google_model
 from response.openai.query_openai_model import query_openai_model
 from utilities.count_tokens import count_tokens
+from utilities.count_tokens import count_gemini_tokens
 from models.api_list import APIList
 from models.user import User
 from models import get_db
@@ -57,11 +58,20 @@ def generate_response(
         else:
             response = query_local_model(generate_prompt(question, prompt_context, instructions, image_data, document_data))
 
-
         # Calculate total tokens used
         if provider == "openai":
-            
             pass  # total_tokens_used is already set from the API response
+        elif provider == "google":
+             # Count tokens for question and response
+            question_tokens = count_gemini_tokens(question, model)
+            response_tokens = count_gemini_tokens(response, model)
+
+            # Count tokens for prompt context if present
+            context_tokens = 0
+            if prompt_context:
+                for context in prompt_context:
+                    context_tokens += count_gemini_tokens(context, model)
+            total_tokens_used = question_tokens + response_tokens + context_tokens
         else:
             # Count tokens for question and response
             question_tokens = count_tokens(question, model)
@@ -85,7 +95,7 @@ def generate_response(
                     db.commit()
                     logger.info(f"Updated token usage for API key {api_key}: {total_tokens_used} tokens used")
             elif user_id:
-                user = User.get_by_id(db, user_id)
+                user = db.query(User).filter(User.id == user_id).first()
                 if user:
                     user.tokens_used += total_tokens_used
                     user.tokens_remaining = user.total_tokens - user.tokens_used
