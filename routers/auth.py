@@ -64,12 +64,10 @@ class Token(BaseModel):
     
     Attributes:
         access_token (str): JWT access token
-        refresh_token (str): JWT refresh token
         token_type (str): Type of token (bearer)
         expires_in (int): Token expiration time in seconds
     """
     access_token: str
-    refresh_token: str
     token_type: str
     expires_in: int
 
