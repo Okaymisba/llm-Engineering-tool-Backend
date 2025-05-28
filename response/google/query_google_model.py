@@ -7,31 +7,31 @@ load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
 
-def query_google_model(model, question, prompt_context=None, instructions=None, image_data=None, document_data=None):
+async def query_google_model(model, question, prompt_context=None, instructions=None, image_data=None,
+                             document_data=None,
+                             stream=True):
     """
-    Executes a query using Google's AI model, integrating optional context, instructions,
-    image data, and document data to generate a response. This function interacts with a
-    client to process and structure the inputs before sending them for generation by the
-    specified model. The response is returned as text.
+    Queries a specified Google model to generate responses to a given question, optionally
+    using additional context, instructions, image data, or document data. Supports streaming
+    and non-streaming response behaviors.
 
-    :param model: Specifies the AI model to be used for the content generation.
+    :param model: The model to be queried.
     :type model: str
-    :param question: The main question or query to be addressed by the AI model.
+    :param question: The primary question or input to query the model with.
     :type question: str
-    :param prompt_context: Additional context or background information provided to
-        enhance the AI model's understanding of the query. This is optional.
+    :param prompt_context: Optional additional context to provide to the model.
     :type prompt_context: Optional[str]
-    :param instructions: Specific instructions or guidelines for the AI model to follow
-        during content generation. This is optional.
+    :param instructions: Optional instructions for guiding the model's behavior.
     :type instructions: Optional[str]
-    :param image_data: Associated image data relevant to the query, included to provide
-        additional context during content generation. This is optional.
-    :type image_data: Optional[Any]
-    :param document_data: Document data relevant to the query for additional context
-        during content generation. This is optional.
-    :type document_data: Optional[Any]
-    :return: The generated content as a string response from the AI model.
-    :rtype: str
+    :param image_data: Optional image data to augment the model's understanding.
+    :type image_data: Optional[str]
+    :param document_data: Optional document data to provide additional context.
+    :type document_data: Optional[str]
+    :param stream: Whether to stream the response from the model. Defaults to True.
+    :type stream: bool
+    :return: An asynchronous generator yielding chunks of text for streaming responses
+             or a complete response text for non-streaming responses.
+    :rtype: AsyncGenerator[str, None] or Generator[str, None, None]
     """
     client = genai.Client(api_key=api_key)
 
@@ -51,9 +51,17 @@ def query_google_model(model, question, prompt_context=None, instructions=None, 
 
     content.append({f"question: {question}"})
 
-    response = client.models.generate_content(
-        model=model,
-        contents=content,
-    )
+    if stream:
+        response = client.models.generate_content_stream(
+            model=model,
+            contents=content,
+        )
 
-    return response.text
+        for chunk in response:
+            yield chunk.text
+    else:
+        response = client.models.generate_content(
+            model=model,
+            contents=content
+        )
+        yield response.text

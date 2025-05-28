@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Request, HTTPException, Depends, status
-from fastapi.responses import RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-import stripe, os
+import datetime
+import logging
+import os
+from typing import Annotated
+
+import stripe
 from dotenv import load_dotenv
+from fastapi import APIRouter, Request, HTTPException, Depends, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from models.__init__ import get_db
 from models.user import User
-from sqlalchemy.orm import Session
-from auth import get_current_user
-from typing import Annotated
-from pydantic import BaseModel
-import logging, datetime
+from routers.auth import get_current_user
 from utilities.email_service import send_email
 from utilities.email_templates import successful_transaction, transaction_failure
 
@@ -29,17 +31,21 @@ router = APIRouter(
     tags=['payment']
 )
 
+
 class CheckoutRequest(BaseModel):
     """Request model for creating checkout session"""
     amount: float
+
 
 class CheckoutResponse(BaseModel):
     """Response model for checkout session"""
     checkout_url: str
 
+
 class PaymentResponse(BaseModel):
     """Response model for payment status"""
     message: str
+
 
 async def send_transaction_email(user: User, amount: float, success: bool = True, session_id: str = None):
     """
@@ -68,17 +74,18 @@ async def send_transaction_email(user: User, amount: float, success: bool = True
                 amount=amount,
                 session_id=session_id
             )
-        
+
         await send_email(user.email, subject, body)
         logger.info(f"Transaction email sent to {user.email}")
     except Exception as e:
         logger.error(f"Failed to send transaction email: {str(e)}")
 
+
 @router.post("/create-checkout-session", response_model=CheckoutResponse)
 async def create_checkout_session(
-    data: CheckoutRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+        data: CheckoutRequest,
+        current_user: Annotated[User, Depends(get_current_user)],
+        db: Session = Depends(get_db)
 ):
     """
     Creates a Stripe checkout session for payment.
@@ -143,6 +150,7 @@ async def create_checkout_session(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error creating checkout session"
         )
+
 
 @router.post("/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
@@ -210,14 +218,14 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         # Handle expired checkout sessions
         session = event['data']['object']
         user_id = session['metadata']['user_id']
-        
+
         try:
             user = db.query(User).filter(User.id == user_id).first()
             if user:
                 user.pending_transaction = False  # Reset pending transaction flag
                 db.commit()
                 logger.info(f"Reset pending transaction for user {user.email} due to expired session")
-                
+
                 # Send failure email
                 amount = session['amount_total'] / 100 if session['amount_total'] else 0
                 await send_transaction_email(user, amount, success=False, session_id=session.id)
@@ -228,10 +236,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
     return {"status": "success"}
 
+
 @router.get("/success", response_model=PaymentResponse)
 async def success():
     """Returns success message after payment completion"""
     return PaymentResponse(message="Payment successful, credits added!")
+
 
 @router.get("/cancel", response_model=PaymentResponse)
 async def cancel():

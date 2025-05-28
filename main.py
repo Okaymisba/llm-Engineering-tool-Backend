@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from models.__init__ import init_db
 from routers import auth, chat, payment_gateway
@@ -8,7 +9,15 @@ from routers.auth import TokenRefreshMiddleware
 app = FastAPI()
 
 # Add token refresh middleware
-app.add_middleware(TokenRefreshMiddleware)
+app.add_middleware(
+  TokenRefreshMiddleware
+  CORSMiddleware,
+  allow_origins=["*"],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
+
 
 init_db()
 

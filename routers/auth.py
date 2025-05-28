@@ -369,7 +369,7 @@ async def get_otp(
     msg = create_login_opt_msg(username, otp)
 
     try:
-        send_email(email, "Your One-Time Password (OTP) for Account Registration", msg)
+        await send_email(email, "Your One-Time Password (OTP) for Account Registration", msg)
         CURRENT_OTPS[email] = OTPData(
             otp=otp,
             expiry=datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES)

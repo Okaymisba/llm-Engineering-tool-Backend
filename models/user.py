@@ -10,11 +10,13 @@ Dependencies:
     - python-dotenv for environment variable management
 """
 
+import os
+
 from dotenv import load_dotenv
 from passlib.context import CryptContext
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
-import os
+
 from models.__init__ import Base
 
 load_dotenv()
@@ -25,16 +27,50 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class User(Base):
     """
-    User model for managing user accounts and authentication.
+    Represents a user in the application with attributes for authentication, usage,
+    and transaction tracking.
 
-    Attributes:
-        id (int): Primary key for user identification
-        username (str): Unique username for the user
-        email (str): Unique email address
-        hashed_password (str): BCrypt hashed password
-        api_keys (relationship): One-to-many relationship with APIList model
+    This class defines a user model with fields such as `username`, `email`,
+    `hashed_password`, and various attributes to track tokens, credits, transactions,
+    and activity details. Relationships are defined for API keys and chat sessions,
+    which are associated entities.
 
-    The model includes methods for password hashing and verification using BCrypt.
+    :ivar id: Unique identifier of the user.
+    :type id: int
+    :ivar username: The username associated with the user.
+    :type username: str
+    :ivar email: The email address associated with the user.
+    :type email: str
+    :ivar hashed_password: The hashed password for authentication.
+    :type hashed_password: str
+    :ivar is_verified: Indicates if the user has been verified.
+    :type is_verified: bool
+    :ivar total_tokens: Total token allocation for the user.
+    :type total_tokens: int
+    :ivar tokens_used: Total number of tokens the user has consumed.
+    :type tokens_used: int
+    :ivar tokens_remaining: Remaining tokens available to the user.
+    :type tokens_remaining: int
+    :ivar total_credits: Total credits allocated to the user.
+    :type total_credits: int
+    :ivar credits_remaining: Credits remaining for the user to utilize.
+    :type credits_remaining: int
+    :ivar credits_used: Total credits consumed by the user.
+    :type credits_used: int
+    :ivar no_of_transactions: The number of transactions carried out by the user.
+    :type no_of_transactions: int
+    :ivar pending_transaction: Indicates whether the user has a pending transaction.
+    :type pending_transaction: bool
+    :ivar last_transaction: Timestamp of the user's last transaction, or None if no
+        transaction has occurred.
+    :type last_transaction: datetime.datetime
+    :ivar last_active: Timestamp of the user's last activity, or None if not
+        available.
+    :type last_active: datetime.datetime
+    :ivar api_keys: List of API keys associated with the user.
+    :type api_keys: list[APIList]
+    :ivar chat_sessions: List of chat sessions associated with the user.
+    :type chat_sessions: list[ChatSession]
     """
     __tablename__ = "users"
 
@@ -50,7 +86,7 @@ class User(Base):
     credits_remaining = Column(Integer, default=0)
     credits_used = Column(Integer, default=0)
     no_of_transactions = Column(Integer, default=0)
-    pending_transaction = Column(Integer, default=False)
+    pending_transaction = Column(Boolean, default=False)
     last_transaction = Column(DateTime(timezone=True), nullable=True)
     last_active = Column(DateTime(timezone=True), nullable=True)
 
