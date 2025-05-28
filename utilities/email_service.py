@@ -17,7 +17,7 @@ def generate_OTP(length=6):
     return otp
 
 
-def send_email(receiver_email, subject, body):
+async def send_email(receiver_email, subject, body):
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email

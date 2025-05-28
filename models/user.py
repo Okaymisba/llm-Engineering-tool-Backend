@@ -12,7 +12,7 @@ Dependencies:
 
 from dotenv import load_dotenv
 from passlib.context import CryptContext
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 import os
 from models.__init__ import Base
@@ -46,6 +46,13 @@ class User(Base):
     total_tokens = Column(Integer, default=os.getenv("FREE_TOKENS"))
     tokens_used = Column(Integer, default=0)
     tokens_remaining = Column(Integer, default=os.getenv("FREE_TOKENS"))
+    total_credits = Column(Integer, default=0)
+    credits_remaining = Column(Integer, default=0)
+    credits_used = Column(Integer, default=0)
+    no_of_transactions = Column(Integer, default=0)
+    pending_transaction = Column(Integer, default=False)
+    last_transaction = Column(DateTime(timezone=True), nullable=True)
+    last_active = Column(DateTime(timezone=True), nullable=True)
 
     api_keys = relationship("APIList", back_populates="user")
     chat_sessions = relationship("ChatSession", back_populates="user")
