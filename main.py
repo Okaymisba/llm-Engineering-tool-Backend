@@ -10,14 +10,16 @@ app = FastAPI()
 
 # Add token refresh middleware
 app.add_middleware(
-  TokenRefreshMiddleware
-  CORSMiddleware,
-  allow_origins=["*"],
-  allow_credentials=True,
-  allow_methods=["*"],
-  allow_headers=["*"],
+    TokenRefreshMiddleware,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 init_db()
 

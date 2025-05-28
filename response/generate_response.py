@@ -76,11 +76,14 @@ async def generate_response(
     try:
         if provider == "deepseek":
             response = query_deepseek_model(model, question, prompt_context, instructions, image_data, document_data)
+            yield response
         elif provider == "openai":
             response, total_tokens_used = query_openai_model(model, question, prompt_context, instructions, image_data,
                                                              document_data)
+            yield response
         elif provider == "anthropic":
             response = query_anthropic_model(model, question, prompt_context, instructions, image_data, document_data)
+            yield response
         elif provider == "google":
             if stream:
                 response = ""
@@ -96,6 +99,7 @@ async def generate_response(
         else:
             response = query_local_model(
                 generate_prompt(question, prompt_context, instructions, image_data, document_data))
+            yield response
 
         if provider == "openai":
             pass
