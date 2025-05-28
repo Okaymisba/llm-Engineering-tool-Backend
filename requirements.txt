@@ -44,3 +44,4 @@ langchain-text-splitters
 anthropic
 tiktoken
 transformers
+stripe
