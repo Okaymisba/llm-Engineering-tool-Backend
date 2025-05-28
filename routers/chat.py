@@ -1,6 +1,7 @@
 from typing import Optional, Annotated, List
 
 from fastapi import APIRouter, File, UploadFile, Depends, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from functions.extract_document_data.extract_document_data import extract_document_data
@@ -39,26 +40,31 @@ async def chat(
         for document in upload_document:
             document_data.append(await extract_document_data(document))
 
-    response = generate_response(
-        provider=provider,
-        model=model,
-        question=question,
-        image_data=image_data,
-        document_data=document_data,
-        user_id=current_user.id
-    )
+    async def stream_response():
+        full_answer = ""
+        async for chunk in generate_response(
+                provider=provider,
+                model=model,
+                question=question,
+                image_data=image_data,
+                document_data=document_data,
+                user_id=current_user.id,
+                stream=True
+        ):
+            full_answer += chunk
+            yield chunk
 
-    chat_session = ChatSession(
-        session_id=session_id,
-        belongs_to=current_user.id,
-        document=str(document_data),
-        image=str(image_data),
-        question=question,
-        answer=response
-    )
+        # Save the full response to DB after streaming is done
+        chat_session = ChatSession(
+            session_id=session_id,
+            belongs_to=current_user.id,
+            document=str(document_data),
+            image=str(image_data),
+            question=question,
+            answer=full_answer
+        )
+        db.add(chat_session)
+        db.commit()
+        db.refresh(chat_session)
 
-    db.add(chat_session)
-    db.commit()
-    db.refresh(chat_session)
-
-    return {"success": True, "answer": response}
+    return StreamingResponse(stream_response(), media_type="text/plain")
