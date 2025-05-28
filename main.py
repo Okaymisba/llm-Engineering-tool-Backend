@@ -3,8 +3,12 @@ from fastapi import FastAPI
 from models.__init__ import init_db
 from routers import auth, chat, payment_gateway
 from routers import upload_custom_model, ask
+from routers.auth import TokenRefreshMiddleware
 
 app = FastAPI()
+
+# Add token refresh middleware
+app.add_middleware(TokenRefreshMiddleware)
 
 init_db()
 

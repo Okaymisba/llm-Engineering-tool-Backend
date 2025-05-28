@@ -1,17 +1,18 @@
 import logging
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, constr
 from sqlalchemy.orm import Session
 from starlette import status
-
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 from models.__init__ import get_db
 from models.user import User
 from utilities.email_service import generate_OTP, send_email
@@ -63,10 +64,12 @@ class Token(BaseModel):
     
     Attributes:
         access_token (str): JWT access token
+        refresh_token (str): JWT refresh token
         token_type (str): Type of token (bearer)
         expires_in (int): Token expiration time in seconds
     """
     access_token: str
+    refresh_token: str
     token_type: str
     expires_in: int
 
@@ -160,16 +163,36 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+class TokenRefreshMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: ASGIApp):
+        super().__init__(app)
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        
+        # Check if the response has a new token in headers
+        if "X-New-Access-Token" in response.headers:
+            # Set the new token in Authorization header
+            response.headers["Authorization"] = f"Bearer {response.headers['X-New-Access-Token']}"
+            # Remove the temporary header
+            del response.headers["X-New-Access-Token"]
+            
+        return response
+
+
 async def get_current_user(
         token: Annotated[str, Depends(oauth2_scheme)],
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        response: Response = None
 ) -> User:
     """
     Validates JWT token and returns the current user.
+    Also creates a new token for the next request.
     
     Args:
         token (str): JWT token from Authorization header
         db (Session): Database session
+        response (Response): FastAPI response object
         
     Returns:
         User: Current user object
@@ -194,6 +217,21 @@ async def get_current_user(
     user = db.query(User).filter(User.email == token_data.email).first()
     if not user:
         raise credentials_exception
+        
+    # Update last_active time
+    user.last_active = datetime.now(timezone.utc)
+    db.commit()
+    
+    # Create new token for next request
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    new_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    
+    # Set new token in response headers
+    if response:
+        response.headers["X-New-Access-Token"] = new_token
+    
     return user
 
 
