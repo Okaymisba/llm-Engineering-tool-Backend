@@ -71,56 +71,57 @@ async def generate_response(
     :return: Generates and yields response text (in chunks during streaming) or a
              complete final response from the queried model. The streaming response
              functionality applies only for "google" provider.
-    :rtype: str
+    :rtype: tuple(str, dict) - Response text and metadata (tokens, status)
     """
     try:
+        response = ""
+        input_tokens = 0
+        output_tokens = 0
+        status_code = 200  # Default success status
+
         if provider == "deepseek":
             response = query_deepseek_model(model, question, prompt_context, instructions, image_data, document_data)
-            yield response
+            yield response, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
         elif provider == "openai":
             response, total_tokens_used = query_openai_model(model, question, prompt_context, instructions, image_data,
                                                              document_data)
-            yield response
+            input_tokens = total_tokens_used // 2
+            output_tokens = total_tokens_used - input_tokens
+            yield response, {"input_tokens": input_tokens, "output_tokens": output_tokens, "status_code": status_code}
         elif provider == "anthropic":
             response = query_anthropic_model(model, question, prompt_context, instructions, image_data, document_data)
-            yield response
+            yield response, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
         elif provider == "google":
             if stream:
                 response = ""
                 async for chunk in query_google_model(model, question, prompt_context, instructions, image_data,
                                                       document_data, stream=True):
                     response += chunk
-                    yield chunk
-
+                    yield chunk, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
             else:
                 response = await query_google_model(model, question, prompt_context, instructions, image_data,
                                                     document_data)
-                yield response
+                yield response, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
         else:
             response = query_local_model(
                 generate_prompt(question, prompt_context, instructions, image_data, document_data))
-            yield response
+            yield response, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
 
-        if provider == "openai":
-            pass
-        elif provider == "google":
-            question_tokens = count_gemini_tokens(question, model)
-            response_tokens = count_gemini_tokens(response, model)
-
-            context_tokens = 0
+        # Calculate tokens for non-OpenAI providers
+        if provider == "google":
+            input_tokens = count_gemini_tokens(question, model)
+            output_tokens = count_gemini_tokens(response, model)
             if prompt_context:
                 for context in prompt_context:
-                    context_tokens += count_gemini_tokens(context, model)
-            total_tokens_used = question_tokens + response_tokens + context_tokens
-        else:
-            question_tokens = count_tokens(question, model)
-            response_tokens = count_tokens(response, model)
-
-            context_tokens = 0
+                    input_tokens += count_gemini_tokens(context, model)
+        elif provider not in ["openai"]:  # Skip OpenAI as we already calculated
+            input_tokens = count_tokens(question, model)
+            output_tokens = count_tokens(response, model)
             if prompt_context:
                 for context in prompt_context:
-                    context_tokens += count_tokens(context, model)
-            total_tokens_used = question_tokens + response_tokens + context_tokens
+                    input_tokens += count_tokens(context, model)
+
+        total_tokens_used = input_tokens + output_tokens
 
         db = next(get_db())
         try:
@@ -140,9 +141,12 @@ async def generate_response(
                     logger.info(f"Updated token usage for user {user_id}: {total_tokens_used} tokens used")
         except Exception as e:
             logger.error(f"Error updating token usage in database: {str(e)}")
+            status_code = 500
         finally:
             db.close()
 
     except Exception as e:
         logger.error(f"Error in generate_response: {str(e)}")
+        status_code = 500
+        yield f"Error: {str(e)}", {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
         raise
