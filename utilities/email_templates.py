@@ -12,7 +12,7 @@ If you did not initiate this request, please ignore this email.
 Need help? Contact our support team at [support@yourcompany.com].
 
 Best regards,  
-The OpenRouter Team  
+The MSW LLM Team  
 www.yourcompany.com
 """
 
@@ -26,10 +26,10 @@ You can now use your credits to access our API services as usual.
 
 If you have any questions or need help, feel free to reply to this email.
 
-Thanks again for choosing OpenRouter!
+Thanks again for choosing MSW LLM!
 
 Best regards,  
-The OpenRouter Team
+The MSW LLM Team
 """
 
 transaction_failure = """Hi ${user_name or email},
@@ -50,5 +50,18 @@ If the issue persists or you need assistance, feel free to contact our support t
 We’re here to help!
 
 Sincerely,  
-The OpenRouter Support Team
+The MSW LLM Support Team
 """
+
+forgot_password_otp = """Hi ${username},
+We received a request to reset your password for your MSW LLM account.
+
+To proceed, please use the following One-Time Password (OTP). This code is valid for the next 5 minutes:
+🧾 Your OTP: ${otp}
+
+If you didn't request this, you can safely ignore this email—your account is still secure.
+
+For help or support, feel free to contact us at [support@MSW LLM].
+
+Thanks,
+The MSW LLM Team"""
