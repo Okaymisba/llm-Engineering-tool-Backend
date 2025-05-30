@@ -79,9 +79,25 @@ async def generate_response(
         output_tokens = 0
         status_code = 200  # Default success status
 
+        # Calculate input tokens first
+        if provider == "google":
+            input_tokens = count_gemini_tokens(question, model)
+            if prompt_context:
+                for context in prompt_context:
+                    input_tokens += count_gemini_tokens(context, model)
+        elif provider == "openai":
+            # OpenAI calculates tokens internally
+            pass
+        else:
+            input_tokens = count_tokens(question, model)
+            if prompt_context:
+                for context in prompt_context:
+                    input_tokens += count_tokens(context, model)
+
         if provider == "deepseek":
             response = query_deepseek_model(model, question, prompt_context, instructions, image_data, document_data)
-            yield response, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
+            output_tokens = count_tokens(response, model)
+            yield response, {"input_tokens": input_tokens, "output_tokens": output_tokens, "status_code": status_code}
         elif provider == "openai":
             response, total_tokens_used = query_openai_model(model, question, prompt_context, instructions, image_data,
                                                              document_data)
@@ -90,36 +106,27 @@ async def generate_response(
             yield response, {"input_tokens": input_tokens, "output_tokens": output_tokens, "status_code": status_code}
         elif provider == "anthropic":
             response = query_anthropic_model(model, question, prompt_context, instructions, image_data, document_data)
-            yield response, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
+            output_tokens = count_tokens(response, model)
+            yield response, {"input_tokens": input_tokens, "output_tokens": output_tokens, "status_code": status_code}
         elif provider == "google":
             if stream:
                 response = ""
                 async for chunk in query_google_model(model, question, prompt_context, instructions, image_data,
                                                       document_data, stream=True):
                     response += chunk
-                    yield chunk, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
+                    # Calculate output tokens for the accumulated response
+                    output_tokens = count_gemini_tokens(response, model)
+                    yield chunk, {"input_tokens": input_tokens, "output_tokens": output_tokens, "status_code": status_code}
             else:
                 response = await query_google_model(model, question, prompt_context, instructions, image_data,
                                                     document_data)
-                yield response, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
+                output_tokens = count_gemini_tokens(response, model)
+                yield response, {"input_tokens": input_tokens, "output_tokens": output_tokens, "status_code": status_code}
         else:
             response = query_local_model(
                 generate_prompt(question, prompt_context, instructions, image_data, document_data))
-            yield response, {"input_tokens": 0, "output_tokens": 0, "status_code": status_code}
-
-        # Calculate tokens for non-OpenAI providers
-        if provider == "google":
-            input_tokens = count_gemini_tokens(question, model)
-            output_tokens = count_gemini_tokens(response, model)
-            if prompt_context:
-                for context in prompt_context:
-                    input_tokens += count_gemini_tokens(context, model)
-        elif provider not in ["openai"]:  # Skip OpenAI as we already calculated
-            input_tokens = count_tokens(question, model)
             output_tokens = count_tokens(response, model)
-            if prompt_context:
-                for context in prompt_context:
-                    input_tokens += count_tokens(context, model)
+            yield response, {"input_tokens": input_tokens, "output_tokens": output_tokens, "status_code": status_code}
 
         total_tokens_used = input_tokens + output_tokens
 
