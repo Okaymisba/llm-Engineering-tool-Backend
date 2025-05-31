@@ -33,15 +33,16 @@ class APIList(Base):
     __tablename__ = 'api_list'
 
     id = Column(Integer, primary_key=True)
+    label = Column(String, nullable=False)
     main_table_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     api_key = Column(String(64), unique=True, nullable=False, index=True)
-    document_id = Column(Integer)
     instructions = Column(Text)
     created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     last_used_at = Column(DateTime, nullable=True)
     total_tokens = Column(Integer, default=os.getenv("FREE_TOKENS"))
     tokens_used = Column(Integer, default=0)
     tokens_remaining = Column(Integer, default=os.getenv("FREE_TOKENS"))
+    token_limit_per_day = Column(Integer)
 
     user = relationship("User", back_populates="api_keys")
     documents = relationship("Documents", back_populates="api", cascade="all, delete-orphan")
@@ -63,7 +64,7 @@ class APIList(Base):
 
     @classmethod
     def create_api_entry(cls, db: Session, main_table_user_id: int, api_key: str,
-                         instructions: str = None, document_id: int = None):
+                         instructions: str = None, label:str = None, token_limit: int = None):
         """
         Create a new API key entry with associated document data.
 
@@ -79,9 +80,10 @@ class APIList(Base):
         """
         api_entry = cls(
             main_table_user_id=main_table_user_id,
+            label=label,
             api_key=api_key,
             instructions=instructions,
-            document_id=document_id
+            token_limit_per_day=token_limit
         )
         db.add(api_entry)
         db.commit()
