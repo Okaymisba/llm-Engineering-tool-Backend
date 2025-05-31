@@ -7,7 +7,7 @@ from functions.semantic_search.semantic_search import semantic_search
 from models import get_db
 from models.api_list import APIList
 from models.documents import Documents
-from response.generate_response import generate_response
+from response.generate_response_streaming import generate_response_streaming
 
 router = APIRouter()
 
@@ -60,7 +60,7 @@ def ask_question(api_key: str, provider: str, model: str, question: str, db: Ses
 
     instructions = api_entry.instructions
 
-    response = generate_response(provider, model, question, prompt_context, instructions, api_key)
+    response = generate_response_streaming(provider, model, question, prompt_context, instructions)
 
     return {
         "success": True,

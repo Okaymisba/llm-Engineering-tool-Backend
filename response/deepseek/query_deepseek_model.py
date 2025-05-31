@@ -8,28 +8,25 @@ load_dotenv()
 
 def query_deepseek_model(model, question, prompt_context=None, instructions=None, image_data=None, document_data=None):
     """
-    Executes a query against a DeepSeek model using OpenAI's API and streams the response
-    in chunks. The function accommodates additional context, instructions, and data in the query
-    to enhance the model's understanding and response accuracy.
+    Queries a DeepSeek model using context, instructions, images, or document data,
+    passing user-specified questions and retrieving streaming responses token by token.
+    This function integrates with the OpenAI API via OpenRouter.
 
-    The function begins by creating a client for OpenAI's API, constructing the message payload
-    to be sent to the model based on the provided parameters, and then streaming the response
-    back from the API in incremental chunks to allow real-time processing.
-
-    :param model: Name of the specific DeepSeek model to query.
+    :param model: The specific model to be used for querying, formatted as "deepseek/<model_name>".
     :type model: str
-    :param question: The user's query or question to be answered by the model.
+    :param question: The main question or prompt for the model to respond to.
     :type question: str
-    :param prompt_context: (Optional) Additional context information to be included in the query.
-    :type prompt_context: str, optional
-    :param instructions: (Optional) Custom instructions provided to enhance or steer the model's behavior.
-    :type instructions: str, optional
-    :param image_data: (Optional) String representation of image data to assist in answering the query.
-    :type image_data: str, optional
-    :param document_data: (Optional) String representation of document data to assist in answering the query.
-    :type document_data: str, optional
-    :return: Generator yielding chunks of the model's textual response as strings.
-    :rtype: Iterator[str]
+    :param prompt_context: Optional contextual information provided to the model to guide its response.
+    :type prompt_context: str or None
+    :param instructions: Optional guidelines or instructions detailing how the model should behave.
+    :type instructions: str or None
+    :param image_data: Optional image information given as input to complement the question context.
+    :type image_data: str or None
+    :param document_data: Optional document information provided to enhance the query context.
+    :type document_data: str or None
+    :return: Yields pieces of the model's response as they stream in and ends with token metadata,
+             which includes `prompt_tokens`, `completion_tokens`, and `total_tokens`, or None if not available.
+    :rtype: Generator[str or dict]
     """
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
@@ -52,6 +49,8 @@ def query_deepseek_model(model, question, prompt_context=None, instructions=None
 
     messages.append({"role": "user", "content": question})
 
+    token_metadata = {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
+
     response = client.chat.completions.create(
         model=f"deepseek/{model}",
         messages=messages,
@@ -60,5 +59,13 @@ def query_deepseek_model(model, question, prompt_context=None, instructions=None
 
     for chunk in response:
         if chunk.choices[0].delta.content:
-            print(chunk.choices[0].delta.content, end="", flush=True)
             yield chunk.choices[0].delta.content
+
+        if hasattr(chunk, 'usage') and chunk.usage is not None:
+            token_metadata.update({
+                "prompt_tokens": getattr(chunk.usage, 'prompt_tokens', None),
+                "completion_tokens": getattr(chunk.usage, 'completion_tokens', None),
+                "total_tokens": getattr(chunk.usage, 'total_tokens', None)
+            })
+
+    yield token_metadata

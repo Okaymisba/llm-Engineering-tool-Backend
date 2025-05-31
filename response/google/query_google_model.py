@@ -7,31 +7,30 @@ load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
 
-async def query_google_model(model, question, prompt_context=None, instructions=None, image_data=None,
-                             document_data=None,
-                             stream=True):
+def query_google_model(model, question, prompt_context=None, instructions=None, image_data=None,
+                       document_data=None):
     """
-    Queries a specified Google model to generate responses to a given question, optionally
-    using additional context, instructions, image data, or document data. Supports streaming
-    and non-streaming response behaviors.
+    Queries the Google model using the provided parameters and streams the generated content
+    alongside token metadata. The function utilizes a client to communicate with the model
+    and accepts various inputs such as the context, question, instructions, and optional
+    image or document data to tailor the model's response. The generated response is then
+    yielded incrementally as text along with token usage metadata detailing the token count
+    information.
 
-    :param model: The model to be queried.
+    :param model: The model to query.
     :type model: str
-    :param question: The primary question or input to query the model with.
+    :param question: The question to ask the model.
     :type question: str
-    :param prompt_context: Optional additional context to provide to the model.
-    :type prompt_context: Optional[str]
-    :param instructions: Optional instructions for guiding the model's behavior.
-    :type instructions: Optional[str]
-    :param image_data: Optional image data to augment the model's understanding.
-    :type image_data: Optional[str]
-    :param document_data: Optional document data to provide additional context.
-    :type document_data: Optional[str]
-    :param stream: Whether to stream the response from the model. Defaults to True.
-    :type stream: bool
-    :return: An asynchronous generator yielding chunks of text for streaming responses
-             or a complete response text for non-streaming responses.
-    :rtype: AsyncGenerator[str, None] or Generator[str, None, None]
+    :param prompt_context: Provides additional context for the model (optional).
+    :type prompt_context: str or None
+    :param instructions: Specific instructions to guide the model (optional).
+    :type instructions: str or None
+    :param image_data: Image data to include as part of the prompt (optional).
+    :type image_data: str or None
+    :param document_data: Document data to include as part of the prompt (optional).
+    :type document_data: str or None
+    :return: A generator yielding the model's textual response or token metadata.
+    :rtype: generator
     """
     client = genai.Client(api_key=api_key)
 
@@ -51,17 +50,20 @@ async def query_google_model(model, question, prompt_context=None, instructions=
 
     content.append({f"question: {question}"})
 
-    if stream:
-        response = client.models.generate_content_stream(
-            model=model,
-            contents=content,
-        )
+    token_metadata = {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
 
-        for chunk in response:
+    response = client.models.generate_content_stream(
+        model=model,
+        contents=content,
+    )
+
+    for chunk in response:
+        if chunk:
             yield chunk.text
-    else:
-        response = client.models.generate_content(
-            model=model,
-            contents=content
-        )
-        yield response.text
+
+        if hasattr(chunk, "usage_metadata"):
+            token_metadata["prompt_tokens"] = chunk.usage_metadata.prompt_token_count
+            token_metadata["completion_tokens"] = chunk.usage_metadata.candidates_token_count
+            token_metadata["total_tokens"] = chunk.usage_metadata.total_token_count
+
+    yield token_metadata
