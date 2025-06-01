@@ -125,11 +125,9 @@ async def chat(
                             input_tokens += chunk["data"]["prompt_tokens"]
                         if "completion_tokens" in chunk["data"]:
                             output_tokens += chunk["data"]["completion_tokens"]
-                        print(chunk)
                         yield json.dumps(chunk)
                     else:
                         full_answer += chunk["data"]
-                        print(chunk)
                         yield json.dumps(chunk)
 
                 latency = int(first_chunk_time - start_time) if first_chunk_time else 0
