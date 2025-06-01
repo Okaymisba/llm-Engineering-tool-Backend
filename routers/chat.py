@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from typing import Optional, Annotated, List
@@ -35,34 +36,44 @@ async def chat(
         db: Session = Depends(get_db)
 ):
     """
-    Handles a chat request by generating a response based on the given parameters
-    and optionally using additional context from uploaded documents or images.
+    Handles a chat request using various input sources such as images, documents, and questions. The endpoint supports
+    streaming the response back to the client while processing the input data. Additionally, it handles events like token
+    calculations, semantic search for documents, and error reporting. All interactions are logged and saved into the
+    database for record-keeping and diagnostics.
 
-    The function takes in the following parameters:
+    :param session_id: The unique identifier for an ongoing chat session. Used to track and log chats.
+    :type session_id: str
 
-    - `session_id`: A unique identifier for the chat session to store the
-      conversation history.
-    - `question`: The main query or input text to be answered or processed
-      by the model.
-    - `provider`: The provider name for the model to be queried.
-    - `model`: The specific model identifier of the provider to be queried.
-    - `our_image_processing_algo`: A boolean indicating whether to use our
-      image processing algorithm.
-    - `document_semantic_search`: A boolean indicating whether to use semantic
-      search on the uploaded documents.
-    - `current_user`: The authenticated user performing the chat request.
-    - `upload_image`: An optional list of image files to be used as context.
-    - `upload_document`: An optional list of document files to be used as context.
-    - `db`: A database session used to store the conversation history.
+    :param question: The primary input to the chat system, which determines the knowledge or reasoning process.
+    :type question: str
 
-    The function returns a StreamingResponse containing the generated response
-    as a sequence of text chunks. The response is generated using the
-    `generate_response` function, which takes in the same parameters as this
-    function, plus a `stream` parameter set to `True`. The response is processed
-    in chunks, and each chunk is yielded to the caller as a text string.
+    :param provider: The service provider which will handle AI/LLM query (e.g., OpenAI, Hugging Face, etc.).
+    :type provider: str
 
-    The function also logs any exceptions that occur during response generation
-    and stores the conversation history in the database.
+    :param model: The AI/LLM model to be used for generating the response.
+    :type model: str
+
+    :param our_image_processing_algo: A flag indicating whether to use the internal image processing algorithm.
+    :type our_image_processing_algo: bool
+
+    :param document_semantic_search: A flag that, if enabled, allows performing a semantic search based on the provided question.
+    :type document_semantic_search: bool
+
+    :param current_user: The current user authenticated in the session. Contains user-specific metadata.
+    :type current_user: User
+
+    :param upload_image: A list of uploaded image files to be processed for the chat session. Defaults to None if not provided.
+    :type upload_image: Optional[List[UploadFile]]
+
+    :param upload_document: A list of uploaded document files to be processed for the chat session. Defaults to None if not provided.
+    :type upload_document: Optional[List[UploadFile]]
+
+    :param db: The database session dependency for performing operations like storing session details or logs.
+    :type db: Session
+
+    :return: A streaming HTTP response containing the chat results in real time. Includes metadata such as tokens used,
+            first response latency, and other metrics.
+    :rtype: StreamingResponse
     """
     image_data = []
     document_data = []
@@ -101,16 +112,25 @@ async def chat(
                 ):
                     if first_chunk_time is None:
                         first_chunk_time = time.time() * 1000
+                    # if the model is reasoning model, then first the streaming will be like this
+                    # {"type": "reasoning", "data": content}
+                    # then it will stream normally like this
+                    # {"type": "content", "data": content}
+                    # else it will stream normally like above
+                    # and the last chunk will be the metadata of the tokens like this
+                    # {"type": "metadata", "data": {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens, "total_tokens": total_tokens}}
 
-                    if isinstance(chunk, str):
-                        full_answer += chunk
-                        yield chunk
-
-                    elif isinstance(chunk, dict):
-                        if "prompt_tokens" in chunk:
-                            input_tokens += chunk["prompt_tokens"]
-                        if "completion_tokens" in chunk:
-                            output_tokens += chunk["completion_tokens"]
+                    if chunk["type"] == "metadata":
+                        if "prompt_tokens" in chunk["data"]:
+                            input_tokens += chunk["data"]["prompt_tokens"]
+                        if "completion_tokens" in chunk["data"]:
+                            output_tokens += chunk["data"]["completion_tokens"]
+                        print(chunk)
+                        yield json.dumps(chunk)
+                    else:
+                        full_answer += chunk["data"]
+                        print(chunk)
+                        yield json.dumps(chunk)
 
                 latency = int(first_chunk_time - start_time) if first_chunk_time else 0
 

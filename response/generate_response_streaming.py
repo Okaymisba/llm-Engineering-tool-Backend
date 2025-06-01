@@ -17,31 +17,23 @@ async def generate_response_streaming(
         document_data: list = None,
 ):
     """
-    Generate a streaming response by querying the specified model provider using the given parameters.
+    Generates a streaming response from the specified provider's model based on the given question,
+    prompt context, and additional inputs. Supports providers such as "deepseek," "google," and
+    others with specific implementations for each.
 
-    This asynchronous generator function streams chunks of the generated response from the specified
-    provider. Supported providers include "deepseek", "openai", "anthropic", and "google". Depending
-    on the provider, certain underlying querying functions will be invoked to process the input parameters,
-    generate a response, and return the result in chunks. Each chunk can represent a part of the model's
-    response or terminal metadata such as token usage statistics for the interaction. Errors during the
-    process are logged, and an error message along with relevant metadata is yielded.
+    This is an asynchronous generator function that yields pieces of data as they are processed.
+    The response chunks may contain different types of data, including reasoning, content, and
+    metadata, depending upon the provider and the model.
 
-    :param provider: The name of the provider used for querying the model. Supported providers
-        include options like "deepseek", "openai", "anthropic", and "google".
-    :param model: The name or identifier of the model being queried, provided by the specified
-        provider.
-    :param question: The question or main query string to be provided as input to the model.
-    :param prompt_context: Optional list of contextual information to guide the model's output.
-        Typically used to provide supplementary information or dialogue context.
-    :param instructions: Optional additional instructions or system-level guidelines to shape
-        the behavior of the model's response.
-    :param image_data: Optional list of image data to be processed or referenced by the model,
-        if the model supports multimodal input.
-    :param document_data: Optional list of document data to be used by the model in generating
-        its response or providing insights.
-    :return: An asynchronous generator yielding individual chunks of data as streaming parts
-        of the response from the given provider.
-
+    :param provider: The name of the AI provider (e.g., "deepseek," "google"). Determines which model service is used.
+    :param model: The specific model to query for generating the response.
+    :param question: The main query or question to which the model should generate a response.
+    :param prompt_context: A list representing the context or additional information to guide the response.
+    :param instructions: Optional instructions passed to the model to influence the response format or content.
+    :param image_data: A list of image data to be used by the model, if supported by the provider.
+    :param document_data: A list of document data to be used by the model, if supported by the provider.
+    :return: An asynchronous generator yielding dictionaries with keys such as "type" and "data" for processed chunks.
+    :rtype: AsyncGenerator[dict, None]
     """
     try:
         if provider == "deepseek":
@@ -57,7 +49,14 @@ async def generate_response_streaming(
                     image_data,
                     document_data
             ):
-                yield chunk
+                data = chunk
+                if chunk.get("reasoning"):
+                    yield {"type": "reasoning", "data": data["reasoning"]}
+                if chunk.get("content"):
+                    yield {"type": "content", "data": data["content"]}
+                if chunk.get("metadata"):
+                    yield {"type": "metadata", "data": data["metadata"]}
+
         elif provider == "openai":
             pass
         elif provider == "anthropic":
@@ -72,7 +71,13 @@ async def generate_response_streaming(
                     image_data,
                     document_data
             ):
-                yield chunk
+                data = chunk
+                if chunk.get("reasoning"):
+                    yield {"type": "reasoning", "data": data["reasoning"]}
+                if chunk.get("content"):
+                    yield {"type": "content", "data": data["content"]}
+                if chunk.get("metadata"):
+                    yield {"type": "metadata", "data": data["metadata"]}
 
     except Exception as e:
         logger.error(f"Error in generate_response: {str(e)}")
