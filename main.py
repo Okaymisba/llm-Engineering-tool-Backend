@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from models.__init__ import init_db
-from routers import auth, chat, payment_gateway
+from routers import auth, chat, payment_gateway, api
 from routers import upload_custom_model, ask
 from routers.auth import TokenRefreshMiddleware
 
@@ -28,3 +28,4 @@ app.include_router(ask.router)
 app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(payment_gateway.router)
+app.include_router(api.router)

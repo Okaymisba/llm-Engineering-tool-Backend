@@ -11,6 +11,7 @@ Dependencies:
 """
 
 import os
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from passlib.context import CryptContext
@@ -79,6 +80,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     total_tokens = Column(Integer, default=os.getenv("FREE_TOKENS"))
     tokens_used = Column(Integer, default=0)
     tokens_remaining = Column(Integer, default=os.getenv("FREE_TOKENS"))
@@ -92,6 +94,11 @@ class User(Base):
 
     api_keys = relationship("APIList", back_populates="user")
     chat_sessions = relationship("ChatSession", back_populates="user")
+
+    def __init__(self, **kwargs):
+        if 'password' in kwargs:
+            kwargs['hashed_password'] = self.get_password_hash(kwargs.pop('password'))
+        super().__init__(**kwargs)
 
     @staticmethod
     def get_password_hash(password: str) -> str:

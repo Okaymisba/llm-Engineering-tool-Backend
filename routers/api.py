@@ -7,7 +7,7 @@ from models.__init__ import get_db
 from models.user import User
 from models.api_list import APIList
 from models.documents import Documents
-from auth import get_current_user
+from routers.auth import get_current_user
 from functions.generate_api_key.generate_api_key import generate_api_key
 from functions.extract_document_data.extract_document_data import extract_document_data
 from functions.chunk_text.chunk_text import chunk_document_text
@@ -17,10 +17,18 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/api",
+    tags=["api"]
+)
 
 class GenApiResponse(BaseModel):
     api_key: str
+
+class GenApiRequest(BaseModel):
+    label:str
+    tl:int
+    instructions:str
 
 class ApiKeyInfo(BaseModel):
     api_key: str
@@ -31,7 +39,7 @@ class ApiKeyInfo(BaseModel):
     tokens_remaining: int
     token_limit_per_day: int
     created_at: str
-    last_used_at: str
+    last_used_at: str | None = None
 
 class UpdateInstructionsRequest(BaseModel):
     instructions: str
@@ -44,11 +52,9 @@ class AddDocumentRequest(BaseModel):
 
 @router.post("/generate-api", response_model=GenApiResponse)
 async def generate_api(
+    request: GenApiRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Session = Depends(get_db),
-    label: str = None,
-    token_limit: int = None,
-    instructions: str = None
 ):
     # Check if user is verified
     if not current_user.is_verified:
@@ -76,19 +82,21 @@ async def generate_api(
     new_api_key = generate_api_key()
     
     # Set token limit (use environment variable if not provided)
-    token_limit = token_limit or int(os.getenv("FREE_TOKENS", "1000"))
+    token_limit = int(os.getenv("FREE_TOKENS", "1000"))
     
     # Create new API entry
     try:
-        api_entry = APIList.create_api_entry(
-            db=db,
+        api_entry = APIList(
             main_table_user_id=current_user.id,
             api_key=new_api_key,
-            instructions=instructions,
-            label=label,
-            token_limit=token_limit
+            instructions=request.instructions,
+            label=request.label,
+            token_limit_per_day=request.tl
         )
-        
+        db.add(api_entry)
+        db.commit()
+        db.refresh(api_entry)
+
         return GenApiResponse(api_key=new_api_key)
         
     except Exception as e:
@@ -118,7 +126,7 @@ async def get_user_api_keys(
             ApiKeyInfo(
                 api_key=key.api_key,
                 label=key.label,
-                instructions=key.instructions,
+                instructions=key.instructions or "",
                 total_tokens=key.total_tokens,
                 tokens_used=key.tokens_used,
                 tokens_remaining=key.tokens_remaining,
@@ -132,6 +140,56 @@ async def get_user_api_keys(
         raise HTTPException(
             status_code=500,
             detail="Failed to retrieve API keys"
+        )
+    
+@router.get("/api-keys/{api_key}", response_model=ApiKeyInfo)
+async def get_api_key_info(
+    api_key: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve information about a specific API key.
+    
+    Args:
+        api_key (str): The API key to retrieve information for
+        current_user (User): The current authenticated user
+        db (Session): The database session
+        
+    Returns:
+        ApiKeyInfo: Information about the API key
+        
+    Raises:
+        HTTPException: If API key not found
+    """
+    try:
+        key = db.query(APIList).filter(
+            APIList.api_key==api_key,
+            APIList.main_table_user_id==current_user.id   
+        ).first()
+        if key is None:
+            raise HTTPException(
+                status_code=404,
+                detail="API key not found",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        return ApiKeyInfo(
+                api_key=key.api_key,
+                label=key.label,
+                instructions=key.instructions or "",
+                total_tokens=key.total_tokens,
+                tokens_used=key.tokens_used,
+                tokens_remaining=key.tokens_remaining,
+                token_limit_per_day=key.token_limit_per_day,
+                created_at=key.created_at.isoformat(),
+                last_used_at=key.last_used_at.isoformat() if key.last_used_at else None
+            )
+    except Exception as e:
+        logger.error(f"Error fetching API key info for key {key}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve API key info",
         )
 
 @router.put("/api-keys/{api_key}/instructions")
@@ -256,13 +314,21 @@ async def add_document(
                 detail="API key not found"
             )
         
+        # Validate file type
+        allowed_types = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "image/jpeg", "image/png"]
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type. Allowed types are: PDF, DOCX, TXT, JPEG, PNG"
+            )
+        
         # Extract data from the file
         extracted_data = await extract_document_data(file)
         
         if not extracted_data:
             raise HTTPException(
                 status_code=400,
-                detail="Unsupported file type or failed to extract data"
+                detail="Failed to extract data from the file"
             )
         
         # Convert extracted data to string if it's not already
@@ -335,7 +401,7 @@ async def delete_api_key(
         db.delete(api_entry)
         db.commit()
         
-        return {"message": "API key deleted successfully"}
+        return {"Success":True,"message": "API key deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:
@@ -345,5 +411,49 @@ async def delete_api_key(
             detail="Failed to delete API key"
         )
     
+@router.get("/api-keys/{api_key}/regenerate")
+async def regenerate_api_key(
+    api_key: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    """
+    Regenerates a specific API key for the current user.
+    
+    Args:
+        api_key (str): The API key to regenerate
+        current_user (User): The current authenticated user
+        db (Session): The database session
+        
+    Returns:
+        dict: Success status and message indicating the API key has been regenerated
+        
+    Raises:
+        HTTPException: If the API key is not found or an error occurs during regeneration
+    """
+    try:
+        api_key_entry = db.query(APIList).filter(
+            APIList.api_key == api_key,
+            APIList.main_table_user_id == current_user.id
+        ).first()
+        if api_key_entry is None:
+            raise HTTPException(
+                status_code=404,
+                detail="API key not found"
+            )
+        new_key = generate_api_key()
+        api_key_entry.api_key = new_key
+        db.commit()
+
+        return {"success": True, "message": "API key secret key regenerated"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in regenerating {api_key}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error regenerating the key, try again later"
+        )
     
 

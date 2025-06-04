@@ -1,11 +1,13 @@
 import os
 
 from dotenv import load_dotenv
-from google import genai
+import google.generativeai as genai
 
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
+# Configure the API key
+genai.configure(api_key=api_key)
 
 async def query_google_model(model, question, prompt_context=None, instructions=None, image_data=None,
                              document_data=None,
@@ -33,35 +35,34 @@ async def query_google_model(model, question, prompt_context=None, instructions=
              or a complete response text for non-streaming responses.
     :rtype: AsyncGenerator[str, None] or Generator[str, None, None]
     """
-    client = genai.Client(api_key=api_key)
+    # Create a model instance
+    model = genai.GenerativeModel(model)
 
+    # Prepare the content
     content = []
 
     if prompt_context:
-        content.append({f"Here is the context: {prompt_context}"})
+        content.append({"text": f"Here is the context: {prompt_context}"})
 
     if instructions:
-        content.append({f"instructions: {instructions}"})
+        content.append({"text": f"instructions: {instructions}"})
 
     if image_data:
-        content.append({f"Image Data: {image_data}"})
+        content.append({"text": f"Image Data: {image_data}"})
 
     if document_data:
-        content.append({f"Document Data: {document_data}"})
+        content.append({"text": f"Document Data: {document_data}"})
 
-    content.append({f"question: {question}"})
+    content.append({"text": f"question: {question}"})
 
     if stream:
-        response = client.models.generate_content_stream(
-            model=model,
-            contents=content,
+        response = model.generate_content(
+            content,
+            stream=True
         )
 
-        for chunk in response:
+        async for chunk in response:
             yield chunk.text
     else:
-        response = client.models.generate_content(
-            model=model,
-            contents=content
-        )
+        response = model.generate_content(content)
         yield response.text

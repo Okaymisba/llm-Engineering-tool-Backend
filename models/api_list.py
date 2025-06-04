@@ -39,14 +39,21 @@ class APIList(Base):
     instructions = Column(Text)
     created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     last_used_at = Column(DateTime, nullable=True)
-    total_tokens = Column(Integer, default=os.getenv("FREE_TOKENS"))
+    total_tokens = Column(Integer, default=os.getenv("FREE_TOKENS", 50000))
     tokens_used = Column(Integer, default=0)
-    tokens_remaining = Column(Integer, default=os.getenv("FREE_TOKENS"))
+    tokens_remaining = Column(Integer, default=os.getenv("FREE_TOKENS", 50000))
     token_limit_per_day = Column(Integer)
 
     user = relationship("User", back_populates="api_keys")
     documents = relationship("Documents", back_populates="api", cascade="all, delete-orphan")
     embeddings = relationship("Embeddings", back_populates="document", cascade="all, delete-orphan")
+
+    def __init__(self, **kwargs):
+        if 'token_limit_per_day' in kwargs:
+            token_limit = kwargs['token_limit_per_day']
+            kwargs['tokens_remaining'] = token_limit
+            kwargs['total_tokens'] = token_limit
+        super().__init__(**kwargs)
 
     @classmethod
     def get_by_api_key(cls, db: Session, api_key: str):
@@ -73,7 +80,8 @@ class APIList(Base):
             main_table_user_id: User ID who owns this API key
             api_key: Unique API key string
             instructions: Optional processing instructions
-            document_id: Optional document identifier
+            label: Optional label for the API key
+            token_limit: Optional token limit per day
 
         Returns:
             Newly created APIList object
@@ -83,7 +91,7 @@ class APIList(Base):
             label=label,
             api_key=api_key,
             instructions=instructions,
-            token_limit_per_day=token_limit
+            token_limit_per_day=token_limit or int(os.getenv("FREE_TOKENS", "1000"))
         )
         db.add(api_entry)
         db.commit()
