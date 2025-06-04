@@ -1,35 +1,66 @@
+from transformers import AutoTokenizer
 import logging
-
+from typing import Optional
 import tiktoken
-
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def count_tokens(text: str, buffer_percent: float = 0.0) -> int:
+def get_tokenizer(model: str) -> Optional[AutoTokenizer]:
     """
-    Counts the number of tokens in the provided text using a specific encoding
-    scheme while accounting for an optional buffer percentage. The buffer
-    percentage increases the token count by a proportional amount to the original
-    token count.
+    Get the appropriate tokenizer for general models.
 
-    :param text: The input text for which tokens need to be counted.
-    :type text: str
-    :param buffer_percent: The optional percentage of buffer to add to the token
-        count. Must be a float value. Defaults to 0.0.
-    :type buffer_percent: float
-    :return: The total number of tokens, including the buffer.
-    :rtype: int
+    Args:
+        model (str): The model name (e.g., "deepseek", "llama-3.0")
+
+    Returns:
+        Optional[AutoTokenizer]: The tokenizer object or None if not found
     """
     try:
-        encoding = tiktoken.get_encoding("cl100k_base")
-        total_tokens = len(encoding.encode(text))
-
-        buffer_tokens = int(total_tokens * buffer_percent)
-        total_tokens += total_tokens + buffer_tokens
-
-        return total_tokens
-
+        return AutoTokenizer.from_pretrained(model)
     except Exception as e:
-        logger.error(f"Error counting tokens: {e}")
+        logger.error(f"Error loading tokenizer for model {model}: {str(e)}")
+        return None
+
+def count_tokens(text: str, model: str = "deepseek") -> int:
+    """
+    Counts the number of tokens in a given text for general models like deepseek, llama, and mistral.
+
+    Args:
+        text (str): The input text (prompt or response)
+        model (str): The model name (e.g., "deepseek", "llama-3.0")
+
+    Returns:
+        int: Number of tokens in the input text
+    """
+    try:
+        tokenizer = get_tokenizer(model)
+        if tokenizer is None:
+            logger.warning(f"Using fallback tokenizer for model {model}")
+            # Fallback to a basic tokenizer if the model-specific one fails
+            tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        return len(tokenizer.encode(text))
+    except Exception as e:
+        logger.error(f"Error counting general model tokens: {str(e)}")
+        return 0
+
+
+def count_gemini_tokens(text: str, model: str = "gemini-pro") -> int:
+    """
+    Counts the number of tokens in a given text for Gemini models using tiktoken.
+
+    Args:
+        text (str): The input text to count tokens for
+        model (str): The Gemini model name (default: "gemini-pro")
+
+    Returns:
+        int: Number of tokens in the input text
+    """
+    try:
+        # Use cl100k_base encoding which is what Gemini uses
+        encoding = tiktoken.get_encoding("cl100k_base")
+        return len(encoding.encode(text))
+    except Exception as e:
+        logger.error(f"Error counting Gemini tokens: {str(e)}")
         return 0
