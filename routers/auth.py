@@ -125,7 +125,7 @@ class UserResponse(BaseModel):
     is_verified: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class LoginRequest(BaseModel):
@@ -334,11 +334,10 @@ async def login_for_access_token(
     }
 
 
-@router.get("/get-otp")
+@router.post("/get-otp")
 async def get_otp(
-        email: str,
-        username: str,
-        request: Request
+        email: str = None,
+        username: str = None,
 ):
     """
     Generates and sends OTP to user's email.

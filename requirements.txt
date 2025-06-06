@@ -28,7 +28,6 @@ typing-inspection
 typing_extensions
 urllib3
 uvicorn
-uvloop
 watchfiles
 websockets
 python-jose[cryptography]

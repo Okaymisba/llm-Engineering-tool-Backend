@@ -15,7 +15,7 @@ Environment Variables Required:
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -37,20 +37,28 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db():
-    """Initialize the database by creating all tables."""
+    """Initialize the database by creating all tables if they don't exist."""
     from models.documents import Documents
     from models.embeddings import Embeddings
     from models.user import User
     from models.api_list import APIList
     from models.chat_sessions import ChatSession
+    
+    # Get all tables that should exist
+    tables = [User, APIList, Documents, Embeddings, ChatSession]
+    
     try:
-        User.__table__.create(bind=engine)
-        APIList.__table__.create(bind=engine)
-        Documents.__table__.create(bind=engine)
-        Embeddings.__table__.create(bind=engine)
-        ChatSession.__table__.create(bind=engine)
+        # Get inspector to check if tables exist
+        inspector = inspect(engine)
+        existing_tables = inspector.get_table_names()
+        
+        # Create tables that don't exist
+        for table in tables:
+            if table.__tablename__ not in existing_tables:
+                table.__table__.create(bind=engine)
+                print(f"Created table: {table.__tablename__}")
     except SQLAlchemyError as e:
-        print("Error creating tables:", e)
+        print("Error during database initialization:", e)
 
 
 def get_db():
