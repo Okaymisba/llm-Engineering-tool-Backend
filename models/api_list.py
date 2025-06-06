@@ -46,7 +46,6 @@ class APIList(Base):
 
     user = relationship("User", back_populates="api_keys")
     documents = relationship("Documents", back_populates="api", cascade="all, delete-orphan")
-    embeddings = relationship("Embeddings", back_populates="document", cascade="all, delete-orphan")
 
     def __init__(self, **kwargs):
         if 'token_limit_per_day' in kwargs:
