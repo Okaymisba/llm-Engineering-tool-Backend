@@ -16,6 +16,7 @@ from models.user import User
 from response.generate_response_streaming import generate_response_streaming
 from routers.auth import get_current_user
 from utilities.count_tokens import count_tokens
+from utilities.search_web.search_web import search_web
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -129,6 +130,7 @@ async def chat(
         question: Annotated[str, Form()],
         provider: Annotated[str, Form()],
         model: Annotated[str, Form()],
+        web_search: Annotated[bool, Form()],
         our_image_processing_algo: Annotated[bool, Form()],
         document_semantic_search: Annotated[bool, Form()],
         current_user: Annotated[User, Depends(get_current_user)],
@@ -136,50 +138,28 @@ async def chat(
         upload_document: Optional[List[UploadFile]] = File(None)
 ):
     """
-    Handles the chat endpoint logic, managing streamed responses and background tasks. This
-    function facilitates interaction with a conversational model, processing images, documents,
-    and other inputs provided in the user's request, while ensuring compatibility with streaming
-    responses and error handling.
+    Handles the chat POST request and provides streaming responses for answers based on the inputs,
+    including text questions, documents, images, and potential web searches. It supports asynchronous
+    streaming of model responses, web search results, and document semantic search hits, while also
+    processing and logging the session in the background.
 
-    :param request: HTTP request object containing metadata and connection details for the client's request.
-    :type request: Request
-
-    :param background_tasks: BackgroundTasks object used for scheduling tasks to be executed after
-                             the response is sent.
-    :type background_tasks: BackgroundTasks
-
-    :param session_id: The identifier for the current session, used to track interactions.
-    :type session_id: str
-
-    :param question: The input question or prompt provided by the user for the model to process.
-    :type question: str
-
-    :param provider: The service or model provider to be used for generating the response.
-    :type provider: str
-
-    :param model: The specific model name or identifier to be used for processing the question.
-    :type model: str
-
-    :param our_image_processing_algo: Boolean flag indicating whether to use a custom image processing algorithm.
-    :type our_image_processing_algo: bool
-
-    :param document_semantic_search: Boolean flag specifying if semantic search should be applied to documents.
-    :type document_semantic_search: bool
-
-    :param current_user: The currently authenticated user, used for session metadata and tracking.
-    :type current_user: User
-
-    :param upload_image: Optional list of uploaded images to be processed in the chat request.
-    :type upload_image: Optional[List[UploadFile]]
-
-    :param upload_document: Optional list of uploaded documents to be processed in the chat request.
-    :type upload_document: Optional[List[UploadFile]]
-
-    :return: A StreamingResponse object that streams incremental outputs from the chat model.
-    :rtype: StreamingResponse
+    :param request: An instance of `Request` representing the HTTP request made by the client.
+    :param background_tasks: An instance of `BackgroundTasks` to schedule background computations.
+    :param session_id: The unique identifier for the chat session.
+    :param question: The input question provided by the user.
+    :param provider: The provider of the language model to be used for generating the response.
+    :param model: The specific model name to utilize for generating responses.
+    :param web_search: A boolean flag indicating whether web search should be performed.
+    :param our_image_processing_algo: A boolean indicating if default image processing should be applied.
+    :param document_semantic_search: A boolean indicating whether to perform semantic search within documents.
+    :param current_user: The current authenticated user, retrieved using the dependency injection of `get_current_user`.
+    :param upload_image: An optional list of image files uploaded by the user for analysis.
+    :param upload_document: An optional list of document files uploaded by the user for analysis.
+    :return: A `StreamingResponse` object containing the response to the client's question in a streaming format.
     """
     image_data_list = []
     document_data_list = []
+    web_search_results = []
     document_hits = None
     start_time = time.time() * 1000
 
@@ -207,12 +187,18 @@ async def chat(
             error_during_streaming_msg = None
 
             try:
+                if web_search:
+                    yield json.dumps({"type": "web_search", "data": "searching..."})
+                    web_search_results.append(await search_web(question))
+                    yield json.dumps({"type": "web_search", "data": web_search_results})
+
                 async for chunk in generate_response_streaming(
                         provider=provider,
                         model=model,
                         question=question,
                         image_data=image_data_list,
-                        document_data=document_data_list
+                        document_data=document_data_list,
+                        web_search_results=web_search_results
                 ):
                     if not client_disconnected_during_streaming and await request.is_disconnected():
                         client_disconnected_during_streaming = True

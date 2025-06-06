@@ -15,25 +15,34 @@ async def generate_response_streaming(
         instructions: str = None,
         image_data: list = None,
         document_data: list = None,
+        web_search_results: list = None
 ):
     """
-    Generates a streaming response from the specified provider's model based on the given question,
-    prompt context, and additional inputs. Supports providers such as "deepseek," "google," and
-    others with specific implementations for each.
+    Generate a streaming response asynchronously for the specified provider and model based on
+    the given question and additional contextual input, using deep learning APIs or models.
 
-    This is an asynchronous generator function that yields pieces of data as they are processed.
-    The response chunks may contain different types of data, including reasoning, content, and
-    metadata, depending upon the provider and the model.
+    The function processes input data, streams responses in chunks, and categorizes
+    each chunk as reasoning, content, or metadata. Each chunk is yielded in a structured
+    format for further processing or use.
 
-    :param provider: The name of the AI provider (e.g., "deepseek," "google"). Determines which model service is used.
-    :param model: The specific model to query for generating the response.
-    :param question: The main query or question to which the model should generate a response.
-    :param prompt_context: A list representing the context or additional information to guide the response.
-    :param instructions: Optional instructions passed to the model to influence the response format or content.
-    :param image_data: A list of image data to be used by the model, if supported by the provider.
-    :param document_data: A list of document data to be used by the model, if supported by the provider.
-    :return: An asynchronous generator yielding dictionaries with keys such as "type" and "data" for processed chunks.
-    :rtype: AsyncGenerator[dict, None]
+    :param provider: The AI service provider to use for generating the response.
+        Supported providers include "deepseek", "openai", "anthropic", and "google".
+    :param model: The specific model identifier of the AI service provider.
+    :param question: The main prompt or question for which a response is to be generated.
+    :param prompt_context: Optional list of additional contextual input to
+        enhance the relevance of the generated response.
+    :param instructions: Optional instructions or directives provided
+        to guide the response generation.
+    :param image_data: Optional list of image data or references provided
+        for context or analysis by the AI model.
+    :param document_data: Optional list of textual documents for the AI
+        model to consider while generating a response.
+    :param web_search_results: Optional list of web search results
+        to incorporate into the context for the response generation.
+    :return: Structured chunks of the response as they become available,
+        categorized into reasoning, content, or metadata.
+        The function yields dictionaries with `type` and `data` keys
+        for each chunk.
     """
     try:
         if provider == "deepseek":
@@ -47,7 +56,8 @@ async def generate_response_streaming(
                     prompt_context,
                     instructions,
                     image_data,
-                    document_data
+                    document_data,
+                    web_search_results
             ):
                 data = chunk
                 if chunk.get("reasoning"):
@@ -69,7 +79,8 @@ async def generate_response_streaming(
                     prompt_context,
                     instructions,
                     image_data,
-                    document_data
+                    document_data,
+                    web_search_results
             ):
                 data = chunk
                 if chunk.get("reasoning"):
