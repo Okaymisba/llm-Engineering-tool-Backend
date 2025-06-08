@@ -7,7 +7,10 @@ from models.__init__ import get_db
 from models.user import User
 from models.api_list import APIList
 from models.documents import Documents
+from models.embeddings import Embeddings
 from routers.auth import get_current_user
+from models.documents import Documents
+from sentence_transformers import SentenceTransformer
 from functions.generate_api_key.generate_api_key import generate_api_key
 from functions.extract_document_data.extract_document_data import extract_document_data
 from functions.chunk_text.chunk_text import chunk_document_text
@@ -49,6 +52,17 @@ class UpdateTokenLimitRequest(BaseModel):
 
 class AddDocumentRequest(BaseModel):
     chunk_text: str
+
+class GetDocumentsResponse(BaseModel):
+    id: int
+    filename: str
+    size: int
+    upload_date: str
+    hits: int
+    last_used: str | None = None
+
+# Initialize model at module level
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 @router.post("/generate-api", response_model=GenApiResponse)
 async def generate_api(
@@ -315,11 +329,11 @@ async def add_document(
             )
         
         # Validate file type
-        allowed_types = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "image/jpeg", "image/png"]
+        allowed_types = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"]
         if file.content_type not in allowed_types:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported file type. Allowed types are: PDF, DOCX, TXT, JPEG, PNG"
+                detail=f"Unsupported file type. Allowed types are: PDF, DOCX, TXT"
             )
         
         # Extract data from the file
@@ -343,24 +357,58 @@ async def add_document(
                 status_code=400,
                 detail="No valid content found in the document"
             )
-        
-        # Create document entries for each chunk
-        documents = []
-        for chunk in chunks:
-            document = Documents(
-                chunk_text=chunk,
-                api_id=api_entry.id
+
+        # Calculate file size in KB
+        file.file.seek(0, 2)
+        size = file.file.tell() / 1024  # Convert to KB
+        file.file.seek(0)
+
+        # Create document entry and commit to get the document_id
+        document = Documents(
+            api_id=api_entry.id,
+            filename=file.filename,
+            size=size,
+            hits=0
+        )
+        db.add(document)
+        db.commit()  # Commit to get the document_id
+        db.refresh(document)  # Refresh to get the generated document_id
+
+        try:
+            # Process embeddings in batches
+            batch_size = 32
+            for i in range(0, len(chunks), batch_size):
+                batch_chunks = chunks[i:i + batch_size]
+                # Generate embeddings for the batch
+                embeddings = model.encode(batch_chunks)
+                
+                # Create embedding entries
+                embedding_entries = [
+                    Embeddings(
+                        document_id=document.document_id,  # Use the correct document_id
+                        embedding=embedding.tobytes(),
+                        chunk_text=chunk
+                    )
+                    for embedding, chunk in zip(embeddings, batch_chunks)
+                ]
+                db.bulk_save_objects(embedding_entries)
+                db.commit()  # Commit each batch
+            
+            return {
+                "message": "Document processed and added successfully",
+                "chunks_created": len(chunks),
+                "document_id": document.document_id,
+                "file_size_kb": size
+            }
+            
+        except Exception as e:
+            # If embedding creation fails, delete the document
+            db.delete(document)
+            db.commit()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to process embeddings: {str(e)}"
             )
-            documents.append(document)
-        
-        # Add all documents to the database
-        db.add_all(documents)
-        db.commit()
-        
-        return {
-            "message": "Document processed and added successfully",
-            "chunks_created": len(chunks)
-        }
         
     except HTTPException:
         raise
@@ -368,7 +416,7 @@ async def add_document(
         logger.error(f"Error processing document for API key {api_key}: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Failed to process and add document"
+            detail=f"Failed to process and add document: {str(e)}"
         )
 
 @router.delete("/api-keys/{api_key}")
@@ -456,4 +504,131 @@ async def regenerate_api_key(
             detail="Error regenerating the key, try again later"
         )
     
+@router.get("/api-keys/{api_key}/documents", response_model=List[GetDocumentsResponse])
+async def getAllDocumentsOfAPI(
+    api_key: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve all documents associated with a specific API key.
 
+    Args:
+        api_key (str): The API key to get documents for
+        current_user (User): The current authenticated user
+        db (Session): The database session
+
+    Returns:
+        List[GetDocumentsResponse]: List of documents with their metadata
+
+    Raises:
+        HTTPException: If API key not found or no documents exist
+    """
+    try:
+        # Validate API key ownership
+        api_entry = db.query(APIList).filter(
+            APIList.main_table_user_id == current_user.id,
+            APIList.api_key == api_key
+        ).first()
+
+        if api_entry is None:
+            raise HTTPException(
+                status_code=404,
+                detail="API key not found"
+            )
+
+        # Get all documents for this API key
+        documents = db.query(Documents).filter(
+            Documents.api_id == api_entry.id
+        ).all()
+
+        if not documents:
+            raise HTTPException(
+                status_code=404,
+                detail="No documents found for this API key"
+            )
+
+        return [
+            GetDocumentsResponse(
+                id=d.document_id,
+                filename=d.filename,
+                size=d.size,
+                upload_date=str(d.created_at),
+                hits=d.hits,
+                last_used=str(d.last_used) if d.last_used else None
+            ) for d in documents
+        ]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in getAllDocumentsOfAPI: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve documents"
+        )
+
+@router.delete("/api-keys/{api_key}/documents/{document_id}")
+async def deleteDocumentFromAPI(
+    api_key: str,
+    document_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a specific document associated with an API key.
+
+    Args:
+        api_key (str): The API key the document belongs to
+        document_id (int): The ID of the document to delete
+        current_user (User): The current authenticated user
+        db (Session): The database session
+
+    Returns:
+        dict: Success status and message
+
+    Raises:
+        HTTPException: If API key or document not found
+    """
+    try:
+        # Validate API key ownership
+        api_entry = db.query(APIList).filter(
+            APIList.main_table_user_id == current_user.id,
+            APIList.api_key == api_key
+        ).first()
+
+        if api_entry is None:
+            raise HTTPException(
+                status_code=404,
+                detail="API key not found"
+            )
+
+        # Validate document exists and belongs to the API key
+        document = db.query(Documents).filter(
+            Documents.document_id == document_id,
+            Documents.api_id == api_entry.id
+        ).first()
+
+        if document is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found or does not belong to this API key"
+            )
+
+        # Delete the document
+        db.delete(document)
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "Document deleted successfully"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting document {document_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete document"
+        )
