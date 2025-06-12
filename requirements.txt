@@ -46,3 +46,5 @@ transformers
 stripe
 httpx
 google-genai
+supabase
+PyJWT
