@@ -1,27 +1,31 @@
 import io
-
 from docx import Document
+import os
 
-
-def parse_docx(file_stream):
+def parse_docx(file_input):
     """
     Parses the content of a .docx file and extracts its text content.
 
-    This function takes a file-like byte stream of a .docx file as input,
-    parses its contents and concatenates the text from all paragraphs into
-    a single string. Every paragraph text is separated by a newline character.
-
-    :param file_stream: A byte stream representing a .docx file.
-    :type file_stream: io.BytesIO
-    :return: A string containing the combined text content of the .docx file,
-        with paragraphs separated by newline characters.
-    :rtype: str
+    Args:
+        file_input: Either a file path (str) or a file stream (bytes/io.BytesIO)
+        
+    Returns:
+        str: The extracted text from the DOCX file
     """
+    try:
+        # Handle both file paths and file streams
+        if isinstance(file_input, str):
+            # If it's a file path, open the file
+            document = Document(file_input)
+        else:
+            # If it's a stream, use it directly
+            document = Document(io.BytesIO(file_input))
 
-    document = Document(io.BytesIO(file_stream))
+        text = ""
+        for paragraph in document.paragraphs:
+            text += paragraph.text + "\n"
 
-    text = ""
-    for paragraph in document.paragraphs:
-        text += paragraph.text + "\n"
-
-    return text.strip()
+        return text.strip()
+        
+    except Exception as e:
+        raise Exception(f"Error processing DOCX: {str(e)}")
