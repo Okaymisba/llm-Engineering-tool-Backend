@@ -1,14 +1,24 @@
-def parse_txt_file(file_stream):
+import os
+
+def parse_txt_file(file_input):
     """
-    Parses the input binary stream of a .txt file and returns its content as a cleaned string.
+    Parses the content of a text file and returns its content as a cleaned string.
 
-    This function decodes the provided binary stream (assumed to be UTF-8 encoded) and removes
-    any leading or trailing whitespace characters from the decoded string.
-
-    :param file_stream: Binary stream of the .txt file.
-    :type file_stream: bytes
-    :return: Content of the .txt file as a stripped UTF-8 string.
-    :rtype: str
+    Args:
+        file_input: Either a file path (str) or a file stream (bytes/io.BytesIO)
+        
+    Returns:
+        str: The content of the text file
     """
-
-    return file_stream.decode('utf-8').strip()
+    try:
+        # Handle both file paths and file streams
+        if isinstance(file_input, str):
+            # If it's a file path, read the file
+            with open(file_input, 'r', encoding='utf-8') as file:
+                return file.read().strip()
+        else:
+            # If it's a stream, decode it directly
+            return file_input.decode('utf-8').strip()
+            
+    except Exception as e:
+        raise Exception(f"Error processing text file: {str(e)}")

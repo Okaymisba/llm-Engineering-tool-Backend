@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import jwt
 from typing import Dict, Any
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -56,6 +57,28 @@ def decode_jwt_token(access_token: str) -> Dict[str, Any]:
         raise jwt.InvalidTokenError(f"Invalid token: {str(e)}")
 
 
+def download_file_from_bucket(file_url: str, local_path: str) -> bool:
+    try:
+        response = requests.get(file_url, stream=True)
+        with open(local_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        return True
+    except Exception as e:
+        print(f"Error downloading file: {e}")
+        return False
 
-# access_token="eyJhbGciOiJIUzI1NiIsImtpZCI6IldhRDRDVk4xcm03UkZpRG4iLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL25wenhyd2VnamZ2cHh2b2ppbnBtLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMWRmMjZhMS0xYzc4LTQ4NjQtODlkMS05NDMzODNhYmQzZWMiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQ5NzMyNjY0LCJpYXQiOjE3NDk3MjkwNjQsImVtYWlsIjoiaXJmYW5zb29tcm8zNzBAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCIsImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jS3ZnNVd3TWJLLVl6bF9CVzJwZE95eXdYY0hhNWt0XzNaQUFBdWEyUGZ6QVRvZ1FBcjA9czk2LWMiLCJlbWFpbCI6ImlyZmFuc29vbXJvMzcwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmdWxsX25hbWUiOiJBYmR1bCBXYXNheSIsImlzcyI6Imh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbSIsIm5hbWUiOiJBYmR1bCBXYXNheSIsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FDZzhvY0t2ZzVXd01iSy1ZemxfQlcycGRPeXl3WGNIYTVrdF8zWkFBQXVhMlBmekFUb2dRQXIwPXM5Ni1jIiwicHJvdmlkZXJfaWQiOiIxMTI4MzMwNDU1NDE4ODAwODc2MTkiLCJzdWIiOiIxMTI4MzMwNDU1NDE4ODAwODc2MTkiLCJ1c2VybmFtZSI6Ildhc2F5MTIifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJvYXV0aCIsInRpbWVzdGFtcCI6MTc0OTcyOTA2NH1dLCJzZXNzaW9uX2lkIjoiZWQxMDkwZGEtMTZiYi00NjhiLTgzOGUtNWViZTZhMmM1ZWFkIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.kJhzQhk6ZzumiaWUwOQDXqopg8RiU-GDB6JQcWxLLM0"
-# print(decode_jwt_token(access_token)["sub"])
+def delete_file_from_bucket(file_url: str):
+    bucket, path = parse_supabase_url(file_url)
+    supabase.storage.from_("files").remove([path])
+
+def parse_supabase_url(file_url: str):
+    # Example: https://xyz.supabase.co/storage/v1/object/public/bucket_name/file.pdf
+    parts = file_url.split("/object/public/")[-1]
+    bucket, *file_parts = parts.split("/")
+    path = "/".join(file_parts)
+    return bucket, path
+
+def insert_embeddings(document_uuid: str, embeddings: list[list[float]]):
+    rows = [{"document_id": document_uuid, "embedding": e} for e in embeddings]
+    supabase.table("embeddings").insert(rows).execute()
