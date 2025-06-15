@@ -9,24 +9,20 @@ BRAVE_API_KEY = os.getenv("BRAVE_API_KEY")
 BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
 
 
-async def search_web(query: str, count: int = 10) -> list[dict]:
+async def search_web(query: str, count: int = 5) -> list[dict]:
     """
-    Perform a web search using the Brave Search API.
+    Executes a web search query using the Brave Search API and retrieves the results as a
+    list of dictionaries containing title, URL, and snippet for each result.
 
-    This function sends an asynchronous GET request to the Brave Search API
-    with the specified search query and the number of results to retrieve.
-    It processes the response data to extract and return relevant search
-    results in a structured format. Each result includes the title, URL, and
-    a snippet of the associated content.
-
-    :param query: The search query string to be used for the web search.
+    :param query: The search query string used to look for relevant resources.
     :type query: str
-    :param count: The maximum number of search results to retrieve. Defaults
-        to 10.
+    :param count: The number of search results to retrieve, defaults to 5.
     :type count: int
-    :return: A list of dictionaries containing the search results. Each
-        dictionary has the keys "title", "url", and "snippet".
+    :return: A list of dictionaries representing the search results, where each dictionary contains a
+             title, URL, and snippet of the result.
     :rtype: list[dict]
+    :raises httpx.HTTPStatusError: If the HTTP response contains a status code indicating an error.
+    :raises httpx.RequestError: If an error occurred while making the request (e.g., network issue).
     """
     headers = {
         "Accept": "application/json",
@@ -47,7 +43,7 @@ async def search_web(query: str, count: int = 10) -> list[dict]:
             {
                 "title": result.get("title", ""),
                 "url": result.get("url", ""),
-                "snippet": result.get("description", "")
+                "snippet": result.get("description", ""),
             }
             for result in data.get("web", {}).get("results", [])
         ]

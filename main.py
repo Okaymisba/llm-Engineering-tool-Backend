@@ -5,7 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 # from routers import auth, chat, payment_gateway, api
 # from routers import upload_custom_model, ask
 # from routers.auth import TokenRefreshMiddleware
-from routers import upload_document
+from routers import upload_document, chat
+
 app = FastAPI()
 
 # # Add token refresh middleware
@@ -26,7 +27,7 @@ app.add_middleware(
 # app.include_router(upload_custom_model.router)
 # app.include_router(ask.router)
 # app.include_router(auth.router)
-# app.include_router(chat.router)
+app.include_router(chat.router)
 # app.include_router(payment_gateway.router)
 # app.include_router(api.router)
 
